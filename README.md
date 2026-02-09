@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vrukshavalli
+
+India's premier luxury plant ecommerce destination: indoor and outdoor plants, planters, and accessories with expert care guides and nationwide delivery.
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **UI:** React 19, Tailwind CSS 4
+- **Animations:** Motion (motion/react)
+- **Icons:** Tabler Icons React
+- **Package manager:** pnpm
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the development server:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Learn More
+Other scripts:
 
-To learn more about Next.js, take a look at the following resources:
+- `pnpm build` – production build
+- `pnpm start` – run production server
+- `pnpm lint` – run ESLint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **`app/`** – App Router pages and layout
+  - **`app/constants/`** – Shared constants (e.g. `colors.ts`)
+  - **`app/features/`** – Feature-based modules
+    - **`navbar/`** – Desktop and mobile nav (logo, search, nav items, profile, wishlist, cart). Mobile: sliding menu with nav items, My Profile, Order Tracking, Wishlist
+    - **`ribbon/`** – Top ribbon (promo/features). Desktop: all items in a row; mobile/tablet: one item at a time with slide animation
+  - **`app/globals.css`** – Global styles and theme
+  - **`app/layout.tsx`** – Root layout (Poppins, Bricolage Grotesque fonts)
+  - **`app/page.tsx`** – Home page
+- **`components/`** – Reusable UI (e.g. `SearchBar`)
+- **`lib/`** – Utilities (e.g. `cn` in `util.ts`)
 
-## Deploy on Vercel
+## Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Top ribbon:** Promo strip with features; on mobile/tablet items cycle with a slide animation
+- **Navbar (desktop):** Logo, search bar, nav links with hover pill animation, profile, wishlist, cart
+- **Navbar (mobile):** Menu icon, brand name, cart; search bar below; sliding full-height menu with nav links, My Profile, Order Tracking, Wishlist; body scroll locked when menu is open
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy
+
+The app can be deployed on [Vercel](https://vercel.com) or any platform that supports Next.js. See [Next.js deployment docs](https://nextjs.org/docs/app/building-your-application/deploying) for details.
