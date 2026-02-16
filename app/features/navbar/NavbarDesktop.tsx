@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "motion/react";
 import { IconHeart, IconShoppingBag, IconUserCircle } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
-import { colors } from "@/app/constants/colors";
 
 const navItems = [
   {
@@ -57,12 +57,7 @@ export default function NavbarDesktop() {
       <div className="container mx-auto flex flex-col items-center justify-between gap-8 px-4 py-4">
         <div className="flex w-full items-center justify-between gap-4">
           <Link href="/">
-            <h1
-              className="text-2xl font-bold font-mono"
-              style={{ color: colors.darkGreen }}
-            >
-              Vrukshavalli
-            </h1>
+            <Image src="/vrukshavalli-logo.svg" alt="Vrukshavalli Logo" width={150} height={40} />
           </Link>
 
           <SearchBar className="max-w-4xl" />
@@ -76,14 +71,13 @@ export default function NavbarDesktop() {
                 key={href}
                 href={href}
                 onMouseEnter={() => setHoveredAction(idx)}
-                className="relative flex items-center justify-center rounded-full p-2 text-zinc-600 transition-colors hover:text-zinc-900"
+                className="relative flex items-center justify-center rounded-full p-2 text-primary-500 transition-colors hover:text-primary-600"
                 aria-label={label}
               >
                 {hoveredAction === idx && (
                   <motion.div
                     layoutId="hoveredAction"
-                    className="absolute inset-0 rounded-full"
-                    style={{ backgroundColor: colors.lightGreen }}
+                    className="absolute inset-0 rounded-full bg-primary-100"
                     transition={{
                       type: "spring",
                       stiffness: 400,
@@ -101,20 +95,19 @@ export default function NavbarDesktop() {
 
         <motion.div
           onMouseLeave={() => setHovered(null)}
-          className="flex flex-1 flex-row items-center justify-center gap-2 text-sm font-medium text-zinc-600"
+          className="flex flex-1 flex-row items-center justify-center gap-2 text-sm font-medium text-primary-500"
         >
           {navItems.map((item, idx) => (
             <Link
               key={item.href}
               href={item.href}
               onMouseEnter={() => setHovered(idx)}
-              className="relative px-4 py-2 text-neutral-600 font-sans"
+              className="relative px-4 py-2 text-primary-500 font-sans"
             >
               {hovered === idx && (
                 <motion.div
                   layoutId="hovered"
-                  className="absolute inset-0 h-full w-full rounded-full"
-                  style={{ backgroundColor: colors.lightGreen }}
+                  className="absolute inset-0 h-full w-full rounded-full bg-primary-100"
                   transition={{
                     type: "spring",
                     stiffness: 400,

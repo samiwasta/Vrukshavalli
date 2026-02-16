@@ -1,5 +1,5 @@
-import NavbarDesktop from "@/app/features/navbar/NavbarDesktop";
-import NavbarMobile from "@/app/features/navbar/NavbarMobile";
+import NavbarDesktop from "@/app/features/Navbar/NavbarDesktop";
+import NavbarMobile from "@/app/features/Navbar/NavbarMobile";
 
 export default function Navbar() {
   return (

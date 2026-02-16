@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { colors } from "@/app/constants/colors";
 
 const RIBBON_FEATURES = [
   "Top Plant Seller in Ratnagiri",
@@ -24,8 +23,7 @@ export default function TopRibbon() {
 
   return (
     <div
-      className="px-4 py-2 text-sm font-medium text-white"
-      style={{ backgroundColor: colors.freshGreen }}
+      className="px-4 py-2 text-sm font-medium text-white bg-primary-500"
     >
       <div className="container mx-auto flex items-center justify-center">
         <div className="hidden w-full items-center justify-between px-16 py-1 lg:flex">

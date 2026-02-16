@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { IconMenu2, IconShoppingBag, IconX } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
-import { colors } from "@/app/constants/colors";
 
 const NAV_ITEMS = [
   { label: "PLANTS", href: "/plants" },
@@ -48,24 +48,19 @@ export default function NavbarMobile() {
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
-              className="flex items-center justify-center rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+              className="flex items-center justify-center rounded-full p-2 text-primary-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
               aria-label="Menu"
             >
               <IconMenu2 size={24} stroke={1.5} />
             </button>
 
-            <Link href="/" className="flex-1 text-center">
-              <h1
-                className="text-xl font-bold font-mono"
-                style={{ color: colors.darkGreen }}
-              >
-                Vrukshavalli
-              </h1>
+            <Link href="/">
+              <Image src="/vrukshavalli-logo.svg" alt="Vrukshavalli Logo" width={150} height={40} />
             </Link>
 
             <Link
               href="/cart"
-              className="flex items-center justify-center rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+              className="flex items-center justify-center rounded-full p-2 text-primary-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
               aria-label="Cart"
             >
               <IconShoppingBag size={24} stroke={1.5} />
@@ -97,17 +92,17 @@ export default function NavbarMobile() {
                 stiffness: 400,
                 damping: 40,
               }}
-              className="fixed inset-y-0 left-0 z-70 w-[min(320px,85vw)] overflow-y-auto border-r border-zinc-200 bg-white shadow-xl lg:hidden"
+              className="fixed inset-y-0 left-0 z-70 w-[min(320px,85vw)] overflow-y-auto border-r border-primary-200 bg-white shadow-xl lg:hidden"
             >
               <div className="flex flex-col gap-1 p-4">
-                <div className="mb-2 flex items-center justify-between border-b border-zinc-100 pb-3">
-                  <span className="text-sm font-sans font-semibold text-zinc-500">
+                <div className="mb-2 flex items-center justify-between border-b border-primary-100 pb-3">
+                  <span className="text-sm font-sans font-semibold text-primary-500">
                     Menu
                   </span>
                   <button
                     type="button"
                     onClick={closeMenu}
-                    className="rounded-full p-2 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                    className="rounded-full p-2 text-primary-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
                     aria-label="Close menu"
                   >
                     <IconX size={22} stroke={1.5} />
@@ -119,31 +114,31 @@ export default function NavbarMobile() {
                     key={item.href}
                     href={item.href}
                     onClick={closeMenu}
-                    className="rounded-lg px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 font-sans"
+                    className="rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
                   >
                     {item.label}
                   </Link>
                 ))}
 
-                <div className="my-2 border-t border-zinc-100 pt-3">
+                <div className="my-2 border-t border-primary-100 pt-3">
                   <Link
                     href={MENU_LINKS[0].href}
                     onClick={closeMenu}
-                    className="block rounded-lg px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 font-sans"
+                    className="block rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
                   >
                     {MENU_LINKS[0].label}
                   </Link>
                   <Link
                     href={MENU_LINKS[1].href}
                     onClick={closeMenu}
-                    className="block rounded-lg px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 font-sans"
+                    className="block rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
                   >
                     {MENU_LINKS[1].label}
                   </Link>
                   <Link
                     href={MENU_LINKS[2].href}
                     onClick={closeMenu}
-                    className="block rounded-lg px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 font-sans"
+                    className="block rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
                   >
                     {MENU_LINKS[2].label}
                   </Link>

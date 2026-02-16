@@ -1,5 +1,4 @@
 import { IconSearch } from "@tabler/icons-react";
-import { colors } from "@/app/constants/colors";
 import { cn } from "@/lib/util";
 
 interface SearchBarProps {
@@ -20,18 +19,16 @@ export default function SearchBar({
       action={action}
       method="GET"
       className={cn(
-        "flex max-w-md flex-1 items-center gap-2 rounded-full border px-4 py-2",
+        "flex max-w-md flex-1 items-center gap-2 rounded-full border px-4 py-2 border-primary-600",
         className
       )}
-      style={{ borderColor: colors.darkGreen }}
     >
-      <IconSearch size={20} className="shrink-0" style={{ color: colors.darkGreen }} />
+      <IconSearch size={20} className="shrink-0 text-primary-600" />
       <input
         type="search"
         name={name}
         placeholder={placeholder}
         className="w-full bg-transparent text-sm placeholder:text-zinc-400 focus:outline-none"
-        style={{ color: colors.darkGreen }}
       />
     </form>
   );

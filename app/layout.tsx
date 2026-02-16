@@ -25,11 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${poppins.variable} ${bricolageGrotesque.variable} antialiased overflow-x-hidden overflow-y-auto`}
-        suppressHydrationWarning
-      >
+    <html
+      lang="en"
+      className={`${poppins.variable} ${bricolageGrotesque.variable}`}
+    >
+      <body className="antialiased overflow-x-hidden overflow-y-auto" suppressHydrationWarning>
         {children}
       </body>
     </html>
