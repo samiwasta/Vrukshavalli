@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { IconArrowRight } from "@tabler/icons-react"
 import { motion } from "motion/react"
 import ProductCard from "@/components/ProductCard"
-import { useRef } from "react"
 
 const handPickedProducts = [
     {
@@ -83,12 +82,11 @@ const handPickedProducts = [
 
 
 export default function HandPicked() {
-    const scrollContainerRef = useRef<HTMLDivElement>(null)
-
     return (
-        <section className="w-full bg-background py-10 sm:py-12 lg:py-14">
-            <div className="container mx-auto px-4 sm:px-6">
-                <div className="flex items-center justify-between mb-8">
+        <section className="container mx-auto w-full bg-background py-10 sm:py-12 lg:py-14">
+            {/* Header with container padding */}
+            <div className="px-4 sm:px-6 mb-8">
+                <div className="flex items-center justify-between">
                     <h2 className="text-2xl lg:text-3xl xl:text-4xl font-semibold text-primary-600 font-mono leading-tight tracking-tight">Handpicked, Just For You!</h2>
                     <motion.div
                         whileHover={{ scale: 1.05 }}
@@ -114,50 +112,36 @@ export default function HandPicked() {
                         </Button>
                     </motion.div>
                 </div>
+            </div>
 
-                {/* Scrollable Product Grid */}
-                <div className="relative">
-                    {/* Left fade mask */}
-                    <div className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-linear-to-r from-background via-background/50 to-transparent z-10 pointer-events-none" />
-                    
-                    {/* Right fade mask */}
-                    <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-linear-to-l from-background via-background/50 to-transparent z-10 pointer-events-none" />
-                    
-                    <motion.div
-                        ref={scrollContainerRef}
-                        className="overflow-x-auto overflow-y-visible pb-4 scrollbar-hide cursor-grab active:cursor-grabbing"
-                        whileTap={{ cursor: "grabbing" }}
-                    >
+            {/* Scrollable Product Grid - Full width */}
+            <div 
+                className="overflow-x-auto overflow-y-visible pb-4 px-4 sm:px-6 snap-x snap-mandatory scroll-smooth hide-scrollbar"
+                style={{ 
+                    WebkitOverflowScrolling: 'touch',
+                }}
+            >
+                <div className="flex gap-4 sm:gap-6">
+                    {handPickedProducts.map((product, index) => (
                         <motion.div
-                            drag="x"
-                            dragConstraints={scrollContainerRef}
-                            dragElastic={0.1}
-                            dragMomentum={false}
-                            dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
-                            style={{ touchAction: "pan-y" }}
-                            className="flex gap-4 sm:gap-6 px-4 sm:px-6"
+                            key={product.id}
+                            className="w-65 sm:w-70 md:w-75 lg:w-80 shrink-0 snap-start"
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: index * 0.1, duration: 0.4 }}
                         >
-                            {handPickedProducts.map((product, index) => (
-                                <motion.div
-                                    key={product.id}
-                                    className="w-65 sm:w-70 md:w-75 lg:w-[320px] shrink-0"
-                                    initial={{ opacity: 0, x: 50 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1, duration: 0.4 }}
-                                >
-                                    <ProductCard {...product} />
-                                </motion.div>
-                            ))}
+                            <ProductCard {...product} />
                         </motion.div>
-                    </motion.div>
+                    ))}
                 </div>
             </div>
 
-            <style jsx global>{`
-                .scrollbar-hide::-webkit-scrollbar {
+            <style jsx>{`
+                .hide-scrollbar::-webkit-scrollbar {
                     display: none;
                 }
-                .scrollbar-hide {
+                .hide-scrollbar {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
                 }
