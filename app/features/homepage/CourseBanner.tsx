@@ -1,4 +1,7 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function CourseBanner() {
     return (
@@ -42,9 +45,11 @@ export default function CourseBanner() {
                             </div>
                         </div>
 
+                        <Link href="https://learn.vrukshavalligardenstore.com" target="_blank">
                         <Button className="mt-5 rounded-full px-8 py-3 text-base font-semibold">
                             Explore Learning Programs
-                        </Button>
+                        </Button>   
+                        </Link>
                     </div>
                 </div>
             </div>

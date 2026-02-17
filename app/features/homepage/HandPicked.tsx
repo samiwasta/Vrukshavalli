@@ -126,8 +126,8 @@ export default function HandPicked() {
                         <motion.div
                             key={product.id}
                             className="w-65 sm:w-70 md:w-75 lg:w-80 shrink-0 snap-start"
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.1, duration: 0.4 }}
                         >

@@ -20,14 +20,14 @@ const CAROUSEL_ITEMS = [
     description:
       "Curated plants and planters for a calm, elevated space. Quality, care, and a touch of luxury delivered to your door.",
     image: "/carousel-2.jpg",
-    cta: { label: "Explore products", href: "/products" },
+    cta: { label: "Explore products", href: "/product" },
   },
   {
     title: "Create your ideal workspace.",
     description:
       "Bring nature into your home with our carefully selected indoor plants. Easy care, unique beauty, and a productive calm.",
     image: "/carousel-1.jpg",
-    cta: { label: "Shop now", href: "/products" },
+    cta: { label: "Shop now", href: "/product" },
   },
   {
     title: "Nurture your space.",

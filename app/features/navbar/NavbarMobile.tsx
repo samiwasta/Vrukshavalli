@@ -6,26 +6,30 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { IconMenu2, IconShoppingBag, IconX } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
+import { useWishlist } from "@/context/WishlistContext";
+import { useSession } from "@/lib/auth-client";
 
 const NAV_ITEMS = [
-  { label: "PLANTS", href: "/plants" },
-  { label: "SEEDS", href: "/seeds" },
-  { label: "POTS & PLANTERS", href: "/pots-and-planters" },
-  { label: "PLANT CARE", href: "/plant-care" },
-  { label: "GIFTING", href: "/gifting" },
+  { label: "PLANTS", href: "/product?category=plants" },
+  { label: "SEEDS", href: "/product?category=seeds" },
+  { label: "POTS & PLANTERS", href: "/product?category=pots-planters" },
+  { label: "PLANT CARE", href: "/product?category=plant-care" },
+  { label: "GIFTING", href: "/product?category=gifting" },
   { label: "GARDEN SERVICES", href: "/garden-services" },
-  { label: "COURSES", href: "/courses" },
+  { label: "COURSES", href: "https://learn.vrukshavalligardenstore.com", target: "_blank" },
   { label: "ABOUT US", href: "/about-us" },
 ];
 
-const MENU_LINKS = [
+const SIDEBAR_LINKS_LOGGED_IN = [
   { label: "My Profile", href: "/profile" },
-  { label: "Order Tracking", href: "/orders" },
-  { label: "Wishlist", href: "/wishlist" },
+  { label: "Track Order", href: "/orders" },
 ];
 
 export default function NavbarMobile() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { items: wishlistItems } = useWishlist();
+  const { data: session } = useSession();
+  const wishlistCount = wishlistItems.length;
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -122,26 +126,39 @@ export default function NavbarMobile() {
 
                 <div className="my-2 border-t border-primary-100 pt-3">
                   <Link
-                    href={MENU_LINKS[0].href}
+                    href="/wishlist"
                     onClick={closeMenu}
-                    className="block rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
+                    className="flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
                   >
-                    {MENU_LINKS[0].label}
+                    Wishlist
+                    {wishlistCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold leading-none text-white">
+                        {wishlistCount > 99 ? "99+" : wishlistCount}
+                      </span>
+                    )}
                   </Link>
-                  <Link
-                    href={MENU_LINKS[1].href}
-                    onClick={closeMenu}
-                    className="block rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
-                  >
-                    {MENU_LINKS[1].label}
-                  </Link>
-                  <Link
-                    href={MENU_LINKS[2].href}
-                    onClick={closeMenu}
-                    className="block rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
-                  >
-                    {MENU_LINKS[2].label}
-                  </Link>
+                  {session?.user ? (
+                    <>
+                      {SIDEBAR_LINKS_LOGGED_IN.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={closeMenu}
+                          className="block rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </>
+                  ) : (
+                    <Link
+                      href="/login"
+                      onClick={closeMenu}
+                      className="mx-2 flex items-center justify-center rounded-lg bg-primary-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 active:bg-primary-800 font-sans"
+                    >
+                      Login
+                    </Link>
+                  )}
                 </div>
               </div>
             </motion.aside>

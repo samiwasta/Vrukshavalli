@@ -1,22 +1,22 @@
 import Link from "next/link";
 import Image from "next/image";
-import { IconBrandInstagram, IconBrandFacebook, IconBrandYoutube, IconBrandTwitter, IconMail, IconPhone, IconMapPin } from "@tabler/icons-react";
+import { IconBrandInstagram, IconBrandFacebook, IconBrandYoutube, IconMail, IconPhone, IconMapPin } from "@tabler/icons-react";
 
 const footerLinks = {
   shop: [
-    { label: "Plants", href: "/plants" },
-    { label: "Seeds", href: "/seeds" },
-    { label: "Pots & Planters", href: "/pots-and-planters" },
-    { label: "Plant Care", href: "/plant-care" },
-    { label: "Gifting", href: "/gifting" },
-    { label: "New Arrivals", href: "/new-arrivals" },
+    { label: "Plants", href: "/product?category=plants" },
+    { label: "Seeds", href: "/product?category=seeds" },
+    { label: "Pots & Planters", href: "/product?category=pots-planters" },
+    { label: "Plant Care", href: "/product?category=plant-care" },
+    { label: "Gifting", href: "/product?category=gifting" },
+    { label: "New Arrivals", href: "/product?category=plants" },
   ],
   company: [
     { label: "About Us", href: "/about-us" },
     { label: "Our Story", href: "/our-story" },
     { label: "Sustainability", href: "/sustainability" },
     { label: "Garden Services", href: "/garden-services" },
-    { label: "Courses", href: "/courses" },
+    { label: "Courses", href: "https://learn.vrukshavalligardenstore.com", target: "_blank" },
     { label: "Blog", href: "/blog" },
   ],
   support: [
@@ -110,7 +110,7 @@ export default function Footer() {
             <h3 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wide">Shop</h3>
             <ul className="space-y-2">
               {footerLinks.shop.map((link) => (
-                <li key={link.href}>
+                <li key={link.label}>
                   <Link
                     href={link.href}
                     className="text-sm text-foreground/65 hover:text-primary-600 inline-block hover:translate-x-0.5 transition-all"
@@ -188,7 +188,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Vrukshavalli. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center md:justify-end gap-x-5 gap-y-2">
-            {footerLinks.policies.map((link, index) => (
+            {footerLinks.policies.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

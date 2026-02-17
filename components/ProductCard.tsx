@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "motion/react";
-import { IconShoppingCart, IconHeart, IconStar, IconStarFilled } from "@tabler/icons-react";
+import { IconHeart, IconStar, IconStarFilled } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
-import { useState } from "react";
+import { useWishlist } from "@/context/WishlistContext";
 
-interface ProductCardProps {
+export interface ProductCardProps {
   id: string | number;
   name: string;
   price: number;
@@ -22,6 +23,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({
+  id,
   name,
   price,
   originalPrice,
@@ -34,25 +36,34 @@ export default function ProductCard({
   isHandPicked,
   className,
 }: ProductCardProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const wishlist = useWishlist();
+  const isFavorite = wishlist.has(id);
   const [isHovered, setIsHovered] = useState(false);
+
+  const handleToggleWishlist = () => {
+    wishlist.toggle({
+      id,
+      name,
+      price,
+      originalPrice,
+      image,
+      rating,
+      reviewCount,
+      category,
+      isNew,
+      isBestSeller,
+      isHandPicked,
+    });
+  };
 
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
 
-  // Truncate product name if too long
-  const truncateName = (text: string, maxLength: number = 28) => {
-    if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength).trim() + '...';
-  };
-
-  const displayName = truncateName(name);
-
   return (
     <motion.div
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-3xl bg-white border border-primary-100/50 hover:border-primary-200 transition-all duration-500 cursor-pointer",
+        "group relative flex min-h-0 flex-col overflow-hidden rounded-3xl bg-white border border-primary-100/50 hover:border-primary-200 transition-all duration-500 cursor-pointer",
         className
       )}
       initial={{ opacity: 0, y: 20 }}
@@ -160,7 +171,7 @@ export default function ProductCard({
               ? "bg-primary-600 text-white" 
               : "bg-white/95 text-primary-600 hover:bg-primary-50"
           )}
-          onClick={() => setIsFavorite(!isFavorite)}
+          onClick={handleToggleWishlist}
           whileHover={{ scale: 1.15 }}
           whileTap={{ scale: 0.9 }}
           initial={{ x: 20, opacity: 0 }}
@@ -187,69 +198,48 @@ export default function ProductCard({
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col p-4 sm:p-5">
-        {/* Category */}
+      <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 md:p-5">
         {category && (
-          <span className="mb-1.5 text-[9px] sm:text-[10px] font-semibold text-primary-600 uppercase tracking-wider">
+          <span className="mb-1 text-[10px] font-semibold text-primary-600 uppercase tracking-wider sm:mb-1.5 sm:text-[10px]">
             {category}
           </span>
         )}
 
-        {/* Product Name */}
-        <h3 className="mb-2 sm:mb-3 text-sm sm:text-base font-semibold text-foreground leading-tight group-hover:text-primary-700 transition-colors duration-300 whitespace-nowrap overflow-hidden text-ellipsis">
-          {displayName}
+        <h3 className="mb-2 line-clamp-2 min-h-[2.5em] text-sm font-semibold leading-tight text-foreground transition-colors duration-300 group-hover:text-primary-700 sm:min-h-[2.25em] sm:mb-3 sm:text-base md:min-h-[2em]">
+          {name}
         </h3>
 
-        {/* Rating */}
         {rating > 0 && (
-          <div className="mb-3 sm:mb-4 flex items-center gap-1 sm:gap-1.5">
+          <div className="mb-2 flex items-center gap-1.5 sm:mb-3">
             <div className="flex items-center gap-0.5">
-              {[...Array(5)].map((_, i) => (
+              {[...Array(5)].map((_, i) =>
                 i < Math.floor(rating) ? (
-                  <IconStarFilled
-                    key={i}
-                    size={12}
-                    className="text-amber-400"
-                  />
+                  <IconStarFilled key={i} size={12} className="text-amber-400" />
                 ) : (
-                  <IconStar
-                    key={i}
-                    size={12}
-                    className="text-gray-300"
-                  />
+                  <IconStar key={i} size={12} className="text-gray-300" />
                 )
-              ))}
+              )}
             </div>
-            <span className="text-[10px] sm:text-xs font-semibold text-gray-700">
-              {rating.toFixed(1)}
-            </span>
-            <span className="text-[10px] sm:text-xs text-gray-400">
-              ({reviewCount})
-            </span>
+            <span className="text-xs font-semibold text-gray-700">{rating.toFixed(1)}</span>
+            <span className="text-xs text-gray-400">({reviewCount})</span>
           </div>
         )}
 
-        {/* Price */}
-        <div className="mt-auto mb-3 sm:mb-4">
-          <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-            <span className="text-xl sm:text-2xl font-bold text-primary-800">
+        <div className="mt-auto mb-2 sm:mb-3 md:mb-4">
+          <div className="flex flex-wrap items-baseline gap-1.5 gap-y-0.5 sm:gap-2">
+            <span className="text-lg font-bold text-primary-800 sm:text-xl md:text-2xl">
               ₹{price}
             </span>
             {originalPrice && (
               <>
-                <span className="text-xs sm:text-sm text-gray-400 line-through">
-                  ₹{originalPrice}
-                </span>
-                <span className="text-[10px] sm:text-xs font-bold text-successDark">
-                  {discount}% OFF
-                </span>
+                <span className="text-xs text-gray-400 line-through sm:text-sm">₹{originalPrice}</span>
+                <span className="text-xs font-bold text-successDark">{discount}% OFF</span>
               </>
             )}
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col gap-2 xl:flex-row">
           <motion.div
             className="flex-1"
             whileHover={{ scale: 1.02 }}

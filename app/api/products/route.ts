@@ -1,7 +1,28 @@
 import { NextResponse } from "next/server";
 import { db, products } from "@/lib/db";
 
-// Example API route to fetch all products
+/**
+ * TODO BACKEND DEVELOPER - Products API
+ *
+ * TASK:
+ * - Harden GET: add query params for category (slug), pagination (page, limit), sort, and filters
+ *   (priceMin, priceMax, ratingMin, isNew, isBestSeller, isHandPicked) so ProductGallery can use
+ *   real data instead of mock. Map category slug from URL to categoryId.
+ * - Add GET by id/slug: e.g. GET /api/products/[id] or ?slug= for single product (product detail page).
+ * - Harden POST: require auth (admin only), validate body with insertProductSchema (or similar),
+ *   sanitize inputs; do not insert raw body. Consider rate limiting for create/update.
+ *
+ * EDGE CASES:
+ * - Empty category: return [] and 200, not 404.
+ * - Invalid category slug: return 400 with clear message or fallback to all products.
+ * - Pagination: validate page/limit (max limit cap), default values.
+ * - Product not found (single): return 404 with consistent JSON shape.
+ * - DB errors: already returning 500; ensure no sensitive details in response.
+ *
+ * NICE TO HAVE:
+ * - Search (full-text or name/description) query param.
+ * - Stock level checks before allowing add-to-cart in future cart API.
+ */
 export async function GET() {
   try {
     const allProducts = await db.select().from(products);
@@ -20,11 +41,13 @@ export async function GET() {
   }
 }
 
-// Example API route to create a product
+/**
+ * TODO BACKEND DEVELOPER - Create product (see GET TODO above for auth/validation).
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     const newProduct = await db.insert(products).values(body).returning();
     
     return NextResponse.json({
