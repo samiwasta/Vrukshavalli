@@ -82,7 +82,7 @@ const ceramicProducts = [
 
 export default function Ceramics() {
     return (
-        <section className="container mx-auto w-full bg-background py-10 sm:py-12 lg:py-14">
+        <section className="container mx-auto px-4 w-full bg-background py-10 sm:py-12 lg:py-14">
             {/* Header with container padding */}
             <div className="px-4 sm:px-6 mb-8">
                 <div className="flex items-center justify-between">

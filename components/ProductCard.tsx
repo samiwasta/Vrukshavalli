@@ -114,7 +114,7 @@ export default function ProductCard({
                   damping: 25
                 }}
               >
-                ★ BEST
+                BEST
               </motion.span>
             )}
             {isHandPicked && (
