@@ -44,7 +44,7 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="sm:col-span-2 lg:col-span-4">
             <Link href="/" className="inline-block mb-5">
-              <Image src="/vrukshavalli-logo.svg" alt="Vrukshavalli Logo" width={180} height={50} className="h-12 w-auto" />
+              <Image src="/vrukshavalli-logo.svg" alt="Vrukshavalli Logo" width={180} height={50} className="h-18 w-auto" />
             </Link>
             <p className="text-foreground/70 mb-6 text-sm leading-relaxed max-w-xs">
               Curating premium plants and gardening essentials for urban spaces. Transform your home into a thriving green sanctuary with our expert guidance and quality products.
@@ -154,26 +154,6 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
-
-        {/* Newsletter Section */}
-        <div className="border-t border-primary-200 pt-10 pb-8">
-          <div className="max-w-xl mx-auto text-center">
-            <h3 className="font-semibold text-foreground mb-2 text-base">Subscribe to Our Newsletter</h3>
-            <p className="text-sm text-foreground/65 mb-5">
-              Get gardening tips, exclusive offers, and updates on new arrivals.
-            </p>
-            <div className="flex gap-2 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-2.5 rounded-lg bg-white border border-primary-200 text-foreground placeholder-foreground/40 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-sm transition-all"
-              />
-              <button className="px-6 py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-all hover:shadow-md text-sm whitespace-nowrap">
-                Subscribe
-              </button>
-            </div>
           </div>
         </div>
 

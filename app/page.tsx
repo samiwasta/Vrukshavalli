@@ -1,17 +1,17 @@
-import CategoryBanners from "@/app/features/HomePage/CategoryBanners";
-import Hero from "@/app/features/HomePage/Hero";
-import Features from "@/app/features/HomePage/Features";
+import CategoryBanners from "@/app/features/homepage/CategoryBanners";
+import Hero from "@/app/features/homepage/Hero";
+import Features from "@/app/features/homepage/Features";
 import Navbar from "@/app/features/navbar/Navbar";
 import TopRibbon from "@/app/features/ribbon/TopRibbon";
-import BestSellers from "./features/HomePage/BestSellers";
-import ImageBento from "./features/HomePage/ImageBento";
-import HandPicked from "./features/HomePage/HandPicked";
-import NewArrivals from "./features/HomePage/NewArrivals";
-import CourseBanner from "./features/HomePage/CourseBanner";
-import Ceramics from "./features/HomePage/Ceramics";
-import Testimonials from "./features/HomePage/Testimonials";
-import CTA from "./features/HomePage/CTA";
-import Footer from "./features/Footer/Footer";
+import BestSellers from "./features/homepage/BestSellers";
+import ImageBento from "./features/homepage/ImageBento";
+import HandPicked from "./features/homepage/HandPicked";
+import NewArrivals from "./features/homepage/NewArrivals";
+import CourseBanner from "./features/homepage/CourseBanner";
+import Ceramics from "./features/homepage/Ceramics";
+import Testimonials from "./features/homepage/Testimonials";
+import CTA from "./features/homepage/CTA";
+import Footer from "./features/footer/Footer";
 
 export default function Home() {
   return (
