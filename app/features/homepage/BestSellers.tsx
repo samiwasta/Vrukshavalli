@@ -125,6 +125,9 @@ export default function BestSellers() {
                             drag="x"
                             dragConstraints={scrollContainerRef}
                             dragElastic={0.1}
+                            dragMomentum={false}
+                            dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+                            style={{ touchAction: "pan-y" }}
                             className="flex gap-4 sm:gap-6 px-4 sm:px-6"
                         >
                             {bestSellingProducts.map((product, index) => (
