@@ -7,7 +7,7 @@ import Link from "next/link";
 
 export default function CommunityCTA() {
   return (
-    <section className="w-full bg-gradient-to-br from-primary-600 to-primary-700 py-16 sm:py-20 lg:py-24 overflow-hidden relative">
+    <section className="w-full bg-linear-to-br from-primary-600 to-primary-700 py-16 sm:py-20 lg:py-24 overflow-hidden relative">
       {/* Decorative background elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 h-40 w-40 rounded-full bg-white blur-3xl" />

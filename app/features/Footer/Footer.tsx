@@ -113,7 +113,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-foreground/65 hover:text-primary-600 transition-colors inline-block hover:translate-x-0.5 transition-transform"
+                    className="text-sm text-foreground/65 hover:text-primary-600 inline-block hover:translate-x-0.5 transition-all"
                   >
                     {link.label}
                   </Link>
@@ -130,7 +130,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-foreground/65 hover:text-primary-600 transition-colors inline-block hover:translate-x-0.5 transition-transform"
+                    className="text-sm text-foreground/65 hover:text-primary-600 inline-block hover:translate-x-0.5 transition-all"
                   >
                     {link.label}
                   </Link>
@@ -147,7 +147,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-foreground/65 hover:text-primary-600 transition-colors inline-block hover:translate-x-0.5 transition-transform"
+                    className="text-sm text-foreground/65 hover:text-primary-600 inline-block hover:translate-x-0.5 transition-all"
                   >
                     {link.label}
                   </Link>

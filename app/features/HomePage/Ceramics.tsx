@@ -117,10 +117,10 @@ export default function Ceramics() {
                 {/* Scrollable Product Grid */}
                 <div className="relative">
                     {/* Left fade mask */}
-                    <div className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-r from-background via-background/50 to-transparent z-10 pointer-events-none" />
+                    <div className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-linear-to-r from-background via-background/50 to-transparent z-10 pointer-events-none" />
                     
                     {/* Right fade mask */}
-                    <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-l from-background via-background/50 to-transparent z-10 pointer-events-none" />
+                    <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-linear-to-l from-background via-background/50 to-transparent z-10 pointer-events-none" />
                     
                     <motion.div
                         ref={scrollContainerRef}
