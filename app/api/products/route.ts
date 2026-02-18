@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, products } from "@/lib/db";
+import { ilike, or } from "drizzle-orm";
 
 /**
  * TODO BACKEND DEVELOPER - Products API
@@ -23,10 +24,26 @@ import { db, products } from "@/lib/db";
  * - Search (full-text or name/description) query param.
  * - Stock level checks before allowing add-to-cart in future cart API.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const allProducts = await db.select().from(products);
-    
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+
+    let query = db.select().from(products);
+
+    if (search && search.trim().length > 0) {
+      const searchTerm = `%${search.trim()}%`;
+      query = query.where(
+        or(
+          ilike(products.name, searchTerm),
+          ilike(products.description, searchTerm)
+        )
+      ) as typeof query;
+    }
+
+    const allProducts = await query.limit(limit);
+
     return NextResponse.json({
       success: true,
       data: allProducts,
