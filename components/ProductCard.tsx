@@ -6,6 +6,7 @@ import { IconHeart, IconStar, IconStarFilled } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
 import { useWishlist } from "@/context/WishlistContext";
+import Link from "next/link";
 
 export interface ProductCardProps {
   id: string | number;
@@ -246,13 +247,15 @@ export default function ProductCard({
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.2 }}
           >
-            <Button 
-              variant="outline"
-              className="w-full rounded-full font-semibold border-2 border-primary-600 text-primary-600 hover:bg-primary-50 text-xs sm:text-sm" 
-              size="sm"
-            >
-              View Details
-            </Button>
+            <Link href={`/product/${id}`} className="block w-full">
+              <Button 
+                variant="outline"
+                className="w-full rounded-full font-semibold border-2 border-primary-600 text-primary-600 hover:bg-primary-50 text-xs sm:text-sm" 
+                size="sm"
+              >
+                View Details
+              </Button>
+            </Link>
           </motion.div>
           <motion.div
             className="flex-1"
