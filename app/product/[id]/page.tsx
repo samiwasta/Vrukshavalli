@@ -559,7 +559,7 @@ export default function ProductDetailPage() {
                 </button>
               </div>
 
-              {/* Add to Cart */}
+              {/* Add to Bag */}
               <Button
                 onClick={handleAddToCart}
                 size="lg"
@@ -572,7 +572,7 @@ export default function ProductDetailPage() {
                     </motion.span>
                   ) : (
                     <motion.span key="add" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-                      <IconShoppingCart size={18} /> Add to Cart
+                      <IconShoppingCart size={18} /> Add to Bag
                     </motion.span>
                   )}
                 </AnimatePresence>
@@ -617,7 +617,7 @@ export default function ProductDetailPage() {
           </div>
           <Button onClick={handleAddToCart} className="rounded-full px-8 font-semibold shadow-md shadow-primary-600/20">
             <IconShoppingCart size={18} />
-            Add to Cart
+            Add to Bag
           </Button>
         </div>
       </motion.div>

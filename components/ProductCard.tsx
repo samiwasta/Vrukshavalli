@@ -267,7 +267,7 @@ export default function ProductCard({
               className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300 border-2 border-primary-600 hover:border-primary-700 text-xs sm:text-sm" 
               size="sm"
             >
-              Add to Cart
+              Add to Bag
             </Button>
           </motion.div>
         </div>

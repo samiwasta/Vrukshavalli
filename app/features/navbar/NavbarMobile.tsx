@@ -8,6 +8,7 @@ import { IconMenu2, IconShoppingBag, IconX } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
 import { useWishlist } from "@/context/WishlistContext";
 import { useSession } from "@/lib/auth-client";
+import { useBag } from "@/context/BagContext";
 
 const NAV_ITEMS = [
   { label: "PLANTS", href: "/product?category=plants" },
@@ -29,6 +30,7 @@ export default function NavbarMobile() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { items: wishlistItems } = useWishlist();
   const { data: session } = useSession();
+  const { openBag } = useBag();
   const wishlistCount = wishlistItems.length;
 
   const closeMenu = () => setMenuOpen(false);
@@ -62,13 +64,14 @@ export default function NavbarMobile() {
               <Image src="/vrukshavalli-logo.svg" alt="Vrukshavalli Logo" width={150} height={40} />
             </Link>
 
-            <Link
-              href="/cart"
+            <button
+              type="button"
+              onClick={openBag}
               className="flex items-center justify-center rounded-full p-2 text-primary-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
-              aria-label="Cart"
+              aria-label="Open bag"
             >
               <IconShoppingBag size={24} stroke={1.5} />
-            </Link>
+            </button>
           </div>
 
           <SearchBar className="w-full max-w-none" />

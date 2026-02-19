@@ -8,6 +8,7 @@ import { IconHeart, IconShoppingBag, IconUserCircle } from "@tabler/icons-react"
 import SearchBar from "@/components/SearchBar";
 import { useWishlist } from "@/context/WishlistContext";
 import { useSession } from "@/lib/auth-client";
+import { useBag } from "@/context/BagContext";
 
 const navItems = [
   {
@@ -47,7 +48,6 @@ const navItems = [
 
 const actionIcons = [
   { href: "/wishlist", label: "Wishlist", icon: IconHeart },
-  { href: "/cart", label: "Cart", icon: IconShoppingBag },
 ] as const;
 
 export default function NavbarDesktop() {
@@ -57,6 +57,7 @@ export default function NavbarDesktop() {
   const userPopoverRef = useRef<HTMLDivElement>(null);
   const { items: wishlistItems } = useWishlist();
   const { data: session } = useSession();
+  const { openBag } = useBag();
   const wishlistCount = wishlistItems.length;
 
   useEffect(() => {
@@ -180,6 +181,26 @@ export default function NavbarDesktop() {
                 )}
               </Link>
             ))}
+
+            {/* Bag button */}
+            <button
+              type="button"
+              onMouseEnter={() => setHoveredAction(99)}
+              onClick={openBag}
+              className="relative flex items-center justify-center rounded-full p-2 text-primary-500 transition-colors hover:text-primary-600"
+              aria-label="Open bag"
+            >
+              {hoveredAction === 99 && (
+                <motion.div
+                  layoutId="hoveredAction"
+                  className="absolute inset-0 rounded-full bg-primary-100"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <span className="relative z-20">
+                <IconShoppingBag size={24} stroke={1.5} />
+              </span>
+            </button>
           </motion.div>
         </div>
 
