@@ -6,6 +6,131 @@
 
 ---
 
+## Frontend Pages — Current Status
+
+All pages below are **frontend-complete**. Items marked ⚠️ are wired to mock / localStorage data and must be connected to the real API once the corresponding backend phase is done.
+
+| Route | Frontend | Backend dependency |
+|-------|----------|--------------------|
+| `/` | ✅ Done | Products API (Phase 4) |
+| `/about-us` | ✅ Done | — (static) |
+| `/contact` | ✅ Done | Phase 9.1 |
+| `/faqs` | ✅ Done | — (static) |
+| `/garden-services` | ✅ Done | — (enquiry form, no API yet) |
+| `/gifting` | ✅ Done | Phase 9.2 |
+| `/login` | ✅ Done | Better Auth (done) |
+| `/orders` | ✅ Done | Phase 7.2 — wire real API |
+| `/orders/[id]` | ✅ Done | Phase 7.3 — wire real API |
+| `/our-story` | ✅ Done | — (static) |
+| `/privacy-policy` | ✅ Done | — (static) |
+| `/product` | ✅ Done | Phase 4.1 — wire real API |
+| `/product/[id]` | ✅ Done | Phase 11 |
+| `/register` | ✅ Done | Better Auth (done) |
+| `/thankyou` | ✅ Done | Phase 7.1 — wire order ID |
+| `/terms` | ✅ Done | — (static) |
+| `/vruksha-ai` | ✅ Done | Gemini AI (Phase Vruksha AI) |
+| `/vruksha-ai/results` | ✅ Done | Gemini AI (Phase Vruksha AI) |
+| `/wishlist` | ✅ Done | Phase 6.5 — wire real API |
+| `/profile` | ❌ Not built | Phase 3 |
+
+---
+
+## Phase Vruksha AI — AI Plant Disease Analyzer ✅ COMPLETED
+
+**Status:** ✅ Feature complete and deployed
+
+AI-powered plant disease analyzer using Google Gemini 2.5 Flash. Users upload a plant image and receive instant diagnosis with treatment recommendations.
+
+### Features Implemented
+
+1. **Upload Page** (`/app/vruksha-ai/page.tsx`)
+   - Drag-and-drop file upload zone with visual feedback
+   - File validation (PNG/JPG/JPEG only, max 10MB)
+   - Image preview with file metadata
+   - 6-stage animated progress bar during analysis:
+     - Uploading Image → Scanning Plant → Identifying Species → Detecting Issues → AI Analysis → Generating Report
+   - Error handling with user-friendly messages
+   - Responsive design with emerald/teal color theme
+
+2. **Gemini API Integration** (`/app/api/vruksha-ai/route.ts`)
+   - POST endpoint accepting multipart/form-data
+   - Model: `gemini-2.5-flash` (confirmed working)
+   - Retry logic with exponential backoff for rate limiting (429 errors)
+   - Structured JSON response prompt requesting:
+     - Plant identification (common + scientific name)
+     - Health status (healthy/diseased)
+     - Confidence percentage
+     - Disease name and severity (none/mild/moderate/severe)
+     - Summary, symptoms, causes
+     - Precautions, treatment steps
+     - Fertilization guide, general care tips
+   - Error handling: 422 for non-plant images, 429 for rate limits, 500 for server errors
+
+3. **Results Page** (`/app/vruksha-ai/results/page.tsx`)
+   - Compact header with breadcrumb navigation
+   - Status hero card with gradient background (emerald for healthy, rose for diseased)
+   - Large plant image thumbnail with decorative blur elements
+   - Status icon, disease name, severity badge, confidence meter
+   - AI-generated summary
+   - 4-column info grid (2-col on mobile) with plant name, scientific name, date, file size
+   - 3 grouped content sections with gradient headers:
+     - **Diagnosis & Analysis** — Symptoms + Causes
+     - **Treatment & Prevention** — Precautions + Treatment steps
+     - **Ongoing Plant Care** — Fertilization guide + General care tips
+   - Each section uses color-coded icons and bullet points with ring decorations
+   - "Analyse Another Plant" CTA button
+   - Results stored in sessionStorage for persistence across page reloads
+
+4. **Environment Configuration**
+   - Added `GEMINI_API_KEY` to `.env` (documented in README.md)
+   - API key obtained from: https://aistudio.google.com/apikey
+
+5. **Navbar Integration**
+   - Added "✦ VRUKSHA AI" navigation link with sparkle icon
+   - Styled in amber to distinguish from other nav items
+   - Updated both `NavbarDesktop.tsx` and `NavbarMobile.tsx`
+
+### Files Modified/Created
+
+**New Files:**
+- `/app/vruksha-ai/page.tsx` — Upload page with drag-drop and progress tracking
+- `/app/vruksha-ai/layout.tsx` — Layout wrapper with metadata
+- `/app/vruksha-ai/results/page.tsx` — Results display page
+- `/app/vruksha-ai/results/layout.tsx` — Results page metadata
+
+**Modified Files:**
+- `/app/features/navbar/NavbarDesktop.tsx` — Added Vruksha AI link
+- `/app/features/navbar/NavbarMobile.tsx` — Added Vruksha AI link
+- `/app/globals.css` — Added missing primary color shades (50, 900, 950)
+- `/.env` — Added GEMINI_API_KEY
+- `/README.md` — Documented Gemini AI integration and environment setup
+- `/TODO.md` — This file
+
+**API Route:**
+- `/app/api/vruksha-ai/route.ts` — Gemini analysis endpoint
+
+### Dependencies Added
+
+```bash
+pnpm add @google/generative-ai@1.42.0
+```
+
+### Known Limitations
+
+- Free tier Gemini API has rate limits (15 requests/minute)
+- Large images (>10MB) are rejected with clear error message
+- Results are stored in sessionStorage (cleared on tab close)
+- No analysis history or database persistence (could be added in future phase)
+
+### Testing Notes
+
+- Tested with various plant images (healthy and diseased)
+- Confirmed working with model `gemini-2.5-flash`
+- Retry logic successfully handles temporary rate limit cooldowns
+- UI tested on desktop and mobile viewports
+
+---
+
 ## Phase 0 — Environment & Secrets
 
 ### 0.1 — Configure `.env.local`
@@ -445,14 +570,14 @@ Replace the `localStorage` reads/writes in `context/WishlistContext.tsx` with AP
 - Return single order; `404` if not found.
 - Verify `order.userId === users.id (for current user)` — do not allow a user to fetch another user's order.
 
-### 7.4 — Orders Page
+### 7.4 — Orders Page ✔️ Frontend Complete
 
-Create `app/orders/page.tsx`:
-- Server or client component; fetch from `GET /api/orders`.
-- Display each order: `orderNumber`, `status` badge, `totalAmount`, `createdAt`, and a product thumbnail list.
-- Link to order detail page at `/orders/[id]`.
-- Show empty state when no orders exist.
-- Navbar already has a link to `/orders`.
+`app/orders/page.tsx` and `app/orders/[id]/page.tsx` are already built and display order history + an order detail / tracking timeline. They currently run on mock data.
+
+Once `GET /api/orders` (7.2) and `GET /api/orders/[id]` (7.3) are live:
+- Replace the mock data fetch in `app/orders/page.tsx` with a real `fetch("/api/orders")`.
+- Replace the mock data fetch in `app/orders/[id]/page.tsx` with a real `fetch("/api/orders/" + id)`.
+- `app/thankyou/page.tsx` also exists and shows a post-checkout confirmation — wire the real order ID from the checkout flow once `POST /api/orders` (7.1) is implemented.
 
 ---
 
@@ -609,8 +734,8 @@ SearchBar already renders but has no live API call. Once `GET /api/products?sear
 | `/api/profile` | GET, PATCH | User | ❌ Missing |
 | `/api/wishlist` | GET, POST | User | ❌ Missing |
 | `/api/wishlist/[productId]` | DELETE | User | ❌ Missing |
-| `/api/orders` | GET, POST | User | ❌ Missing |
-| `/api/orders/[id]` | GET | User | ❌ Missing |
+| `/api/orders` | GET, POST | User | ❌ Missing — frontend pages ready |
+| `/api/orders/[id]` | GET | User | ❌ Missing — frontend pages ready |
 | `/api/orders/[id]` | PATCH | Admin | ❌ Missing |
 | `/api/coupons/validate` | POST | None | ❌ Missing |
 | `/api/contact` | POST | None | ❌ Missing |

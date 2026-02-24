@@ -14,7 +14,6 @@ const footerLinks = {
   company: [
     { label: "About Us", href: "/about-us" },
     { label: "Our Story", href: "/our-story" },
-    { label: "Sustainability", href: "/sustainability" },
     { label: "Garden Services", href: "/garden-services" },
     { label: "Courses", href: "https://learn.vrukshavalligardenstore.com", target: "_blank" },
     { label: "Blog", href: "/blog" },
@@ -22,16 +21,10 @@ const footerLinks = {
   support: [
     { label: "Contact Us", href: "/contact" },
     { label: "FAQs", href: "/faqs" },
-    { label: "Shipping & Delivery", href: "/shipping" },
-    { label: "Returns & Refunds", href: "/returns" },
-    { label: "Track Order", href: "/track-order" },
-    { label: "Plant Care Guide", href: "/plant-care-guide" },
   ],
   policies: [
     { label: "Privacy Policy", href: "/privacy-policy" },
     { label: "Terms & Conditions", href: "/terms" },
-    { label: "Cancellation Policy", href: "/cancellation" },
-    { label: "Shipping Policy", href: "/shipping-policy" },
   ],
 };
 
@@ -55,20 +48,21 @@ export default function Footer() {
               <div className="flex items-start gap-2.5">
                 <IconMapPin size={17} className="text-primary-500 mt-0.5 shrink-0" />
                 <p className="text-sm text-foreground/65 leading-relaxed">
-                  123 Garden Street, Green Valley<br />
-                  Mumbai, Maharashtra 400001
+                  Chinmayanand Plaza, Near Agashe Departmental Stores<br />
+                  Salvi Stop – Nachane, Link Road<br />
+                  Ratnagiri, Maharashtra 415639
                 </p>
               </div>
               <div className="flex items-center gap-2.5">
                 <IconPhone size={17} className="text-primary-500 shrink-0" />
-                <a href="tel:+919876543210" className="text-sm text-foreground/65 hover:text-primary-600 transition-colors">
-                  +91 98765 43210
+                <a href="tel:+917719890777" className="text-sm text-foreground/65 hover:text-primary-600 transition-colors">
+                  +91 77198 90777
                 </a>
               </div>
               <div className="flex items-center gap-2.5">
                 <IconMail size={17} className="text-primary-500 shrink-0" />
-                <a href="mailto:hello@vrukshavalli.com" className="text-sm text-foreground/65 hover:text-primary-600 transition-colors">
-                  hello@vrukshavalli.com
+                <a href="mailto:vrukshavalliratnagiri@gmail.com" className="text-sm text-foreground/65 hover:text-primary-600 transition-colors">
+                  vrukshavalliratnagiri@gmail.com
                 </a>
               </div>
             </div>

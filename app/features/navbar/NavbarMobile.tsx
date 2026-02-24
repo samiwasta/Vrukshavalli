@@ -4,26 +4,32 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { IconMenu2, IconShoppingBag, IconX } from "@tabler/icons-react";
+import { IconMenu2, IconShoppingBag, IconX, IconSparkles } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
 import { useWishlist } from "@/context/WishlistContext";
 import { useSession } from "@/lib/auth-client";
 import { useBag } from "@/context/BagContext";
 
-const NAV_ITEMS = [
+interface NavItem {
+  label: string;
+  href: string;
+  target?: string;
+  icon?: typeof IconSparkles;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { label: "PLANTS", href: "/product?category=plants" },
   { label: "SEEDS", href: "/product?category=seeds" },
   { label: "POTS & PLANTERS", href: "/product?category=pots-planters" },
   { label: "PLANT CARE", href: "/product?category=plant-care" },
   { label: "GIFTING", href: "/product?category=gifting" },
   { label: "GARDEN SERVICES", href: "/garden-services" },
+  { label: "VRUKSHA AI", href: "/vruksha-ai", icon: IconSparkles },
   { label: "COURSES", href: "https://learn.vrukshavalligardenstore.com", target: "_blank" },
-  { label: "ABOUT US", href: "/about-us" },
 ];
 
 const SIDEBAR_LINKS_LOGGED_IN = [
   { label: "My Profile", href: "/profile" },
-  { label: "Track Order", href: "/orders" },
 ];
 
 export default function NavbarMobile() {
@@ -121,8 +127,13 @@ export default function NavbarMobile() {
                     key={item.href}
                     href={item.href}
                     onClick={closeMenu}
-                    className="rounded-lg px-4 py-3 text-sm font-medium text-primary-500 transition-colors hover:bg-primary-100 font-sans"
+                    className={`rounded-lg px-4 py-3 text-sm font-medium transition-colors font-sans flex items-center gap-2 ${
+                      item.icon
+                        ? "text-amber-600 hover:bg-amber-50 font-semibold"
+                        : "text-primary-500 hover:bg-primary-100"
+                    }`}
                   >
+                    {item.icon && <item.icon size={15} stroke={2} />}
                     {item.label}
                   </Link>
                 ))}

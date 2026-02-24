@@ -4,13 +4,20 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { IconHeart, IconShoppingBag, IconUserCircle } from "@tabler/icons-react";
+import { IconHeart, IconShoppingBag, IconUserCircle, IconSparkles } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
 import { useWishlist } from "@/context/WishlistContext";
 import { useSession } from "@/lib/auth-client";
 import { useBag } from "@/context/BagContext";
 
-const navItems = [
+interface NavItem {
+  label: string;
+  href: string;
+  target?: string;
+  icon?: typeof IconSparkles;
+}
+
+const navItems: NavItem[] = [
   {
     label: "PLANTS",
     href: "/product?category=plants",
@@ -36,8 +43,9 @@ const navItems = [
     href: "/garden-services",
   },
   {
-    label: "ABOUT US",
-    href: "/about-us",
+    label: "VRUKSHA AI",
+    href: "/vruksha-ai",
+    icon: IconSparkles,
   },
   {
     label: "COURSES",
@@ -117,7 +125,7 @@ export default function NavbarDesktop() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-xl border border-primary-200 bg-white py-2 shadow-lg"
+                    className="absolute right-0 top-full z-50 mt-2 min-w-45 rounded-xl border border-primary-200 bg-white py-2 shadow-lg"
                   >
                     {session?.user ? (
                       <>
@@ -127,13 +135,6 @@ export default function NavbarDesktop() {
                           className="block px-4 py-2.5 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-50"
                         >
                           My Profile
-                        </Link>
-                        <Link
-                          href="/orders"
-                          onClick={() => setUserPopoverOpen(false)}
-                          className="block px-4 py-2.5 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-50"
-                        >
-                          Track Order
                         </Link>
                       </>
                     ) : (
@@ -226,7 +227,12 @@ export default function NavbarDesktop() {
                   }}
                 />
               )}
-              <span className="relative z-20">{item.label}</span>
+              <span className={`relative z-20 flex items-center gap-1.5 ${
+                item.icon ? "font-semibold text-amber-600" : ""
+              }`}>
+                {item.icon && <item.icon size={13} stroke={2} />}
+                {item.label}
+              </span>
             </Link>
           ))}
         </motion.div>
