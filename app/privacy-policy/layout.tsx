@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "@/app/features/navbar/Navbar";
-import Footer from "@/app/features/Footer/Footer";
+import Footer from "@/app/features/footer/Footer";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Vrukshavalli",
