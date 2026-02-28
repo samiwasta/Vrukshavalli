@@ -3,3 +3,8 @@ export * from "./users";
 export * from "./products";
 export * from "./categories";
 export * from "./orders";
+export * from "./addresses";
+export * from "./wishlist";
+export * from "./coupons";
+export * from "./contact-submissions";
+export * from "./gifting-enquiries";

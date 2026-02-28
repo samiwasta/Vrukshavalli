@@ -63,37 +63,37 @@ const CATEGORY_IMAGES: Record<string, string> = {
   gifting: "/category-plant.webp",
 };
 
-function getMockProduct(id: string): Product {
-  const category = id.split("-")[0] ?? "plants";
-  const img = CATEGORY_IMAGES[category] ?? "/category-plant.webp";
-  const price = Math.floor(Math.random() * 500) + 150;
-  const originalPrice = Math.random() > 0.4 ? Math.floor(price * (1 + Math.random() * 0.6 + 0.2)) : undefined;
-  return {
-    id,
-    name: `${category.charAt(0).toUpperCase() + category.slice(1)} Product ${id.split("-")[1] ?? "1"}`,
-    slug: id,
-    description:
-      "A stunning addition to any indoor space, this plant brings life and colour while naturally purifying the air. Thrives in indirect light and requires minimal maintenance — perfect for both seasoned plant enthusiasts and beginners alike. Its lush, vibrant foliage creates a soothing focal point in living rooms, offices, and balconies.",
-    price,
-    originalPrice,
-    image: img,
-    images: [img, img, img, img],
-    category: category.charAt(0).toUpperCase() + category.slice(1),
-    rating: parseFloat((Math.random() * 1.5 + 3.5).toFixed(1)),
-    reviewCount: Math.floor(Math.random() * 300) + 20,
-    stock: Math.floor(Math.random() * 20) + 1,
-    isNew: Math.random() > 0.6,
-    isBestSeller: Math.random() > 0.5,
-    isHandPicked: Math.random() > 0.7,
-    careLevel: ["Easy", "Moderate", "Expert"][Math.floor(Math.random() * 3)] as Product["careLevel"],
-    light: "Bright indirect light",
-    water: "Once a week",
-    size: "Medium (30–45 cm)",
-    petFriendly: Math.random() > 0.5,
-    subCategory: category === "plants" ? "indoor" : undefined,
-    sizesAvailable: category === "plants" ? ['4"', '6"'] : undefined,
-  };
-}
+// function getMockProduct(id: string): Product {
+//   const category = id.split("-")[0] ?? "plants";
+//   const img = CATEGORY_IMAGES[category] ?? "/category-plant.webp";
+//   const price = Math.floor(Math.random() * 500) + 150;
+//   const originalPrice = Math.random() > 0.4 ? Math.floor(price * (1 + Math.random() * 0.6 + 0.2)) : undefined;
+//   return {
+//     id,
+//     name: `${category.charAt(0).toUpperCase() + category.slice(1)} Product ${id.split("-")[1] ?? "1"}`,
+//     slug: id,
+//     description:
+//       "A stunning addition to any indoor space, this plant brings life and colour while naturally purifying the air. Thrives in indirect light and requires minimal maintenance — perfect for both seasoned plant enthusiasts and beginners alike. Its lush, vibrant foliage creates a soothing focal point in living rooms, offices, and balconies.",
+//     price,
+//     originalPrice,
+//     image: img,
+//     images: [img, img, img, img],
+//     category: category.charAt(0).toUpperCase() + category.slice(1),
+//     rating: parseFloat((Math.random() * 1.5 + 3.5).toFixed(1)),
+//     reviewCount: Math.floor(Math.random() * 300) + 20,
+//     stock: Math.floor(Math.random() * 20) + 1,
+//     isNew: Math.random() > 0.6,
+//     isBestSeller: Math.random() > 0.5,
+//     isHandPicked: Math.random() > 0.7,
+//     careLevel: ["Easy", "Moderate", "Expert"][Math.floor(Math.random() * 3)] as Product["careLevel"],
+//     light: "Bright indirect light",
+//     water: "Once a week",
+//     size: "Medium (30–45 cm)",
+//     petFriendly: Math.random() > 0.5,
+//     subCategory: category === "plants" ? "indoor" : undefined,
+//     sizesAvailable: category === "plants" ? ['4"', '6"'] : undefined,
+//   };
+// }
 
 // ── Star Rating ──────────────────────────────────────────────────────────────
 function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
@@ -106,7 +106,7 @@ function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
           <IconStar key={i} size={size} className="text-amber-300" />
         ) : (
           <IconStar key={i} size={size} className="text-zinc-300" />
-        )
+        ),
       )}
     </div>
   );
@@ -141,13 +141,51 @@ export default function ProductDetailPage() {
   const isFav = product ? wishlist.has(product.id) : false;
 
   // TODO: Replace with real API fetch: GET /api/products?slug=id or /api/products/[id]
+  // useEffect(() => {
+  //   setLoading(true);
+  //   const timer = setTimeout(() => {
+  //     setProduct(getMockProduct(id));
+  //     setLoading(false);
+  //   }, 500);
+  //   return () => clearTimeout(timer);
+  // }, [id]);
+
   useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setProduct(getMockProduct(id));
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    if (!id) return;
+
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+
+        const res = await fetch(`/api/products/${id}`);
+        const json = await res.json();
+
+        if (json.success) {
+          const p = json.data;
+
+          setProduct({
+            ...p,
+            category: p.category?.name ?? "",
+
+            // ✅ convert numeric strings → numbers
+            price: Number(p.price),
+            originalPrice: p.originalPrice
+              ? Number(p.originalPrice)
+              : undefined,
+            rating: Number(p.rating),
+          });
+        } else {
+          setProduct(null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch product", err);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
   }, [id]);
 
   const handleAddToCart = () => {
@@ -183,7 +221,9 @@ export default function ProductDetailPage() {
   };
 
   const discount = product?.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    ? Math.round(
+        ((product.originalPrice - product.price) / product.originalPrice) * 100,
+      )
     : 0;
 
   // ── Skeleton ────────────────────────────────────────────────────────────
@@ -196,7 +236,13 @@ export default function ProductDetailPage() {
             <div className="aspect-square animate-pulse rounded-3xl bg-primary-100" />
             <div className="space-y-4">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className={cn("animate-pulse rounded-xl bg-primary-100", i === 0 ? "h-10 w-3/4" : "h-5 w-full")} />
+                <div
+                  key={i}
+                  className={cn(
+                    "animate-pulse rounded-xl bg-primary-100",
+                    i === 0 ? "h-10 w-3/4" : "h-5 w-full",
+                  )}
+                />
               ))}
             </div>
           </div>
@@ -210,7 +256,6 @@ export default function ProductDetailPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:py-10">
-
         {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, x: -10 }}
@@ -225,7 +270,12 @@ export default function ProductDetailPage() {
             Back
           </button>
           <span>/</span>
-          <Link href="/product" className="hover:text-primary-600 transition-colors">Products</Link>
+          <Link
+            href="/product"
+            className="hover:text-primary-600 transition-colors"
+          >
+            Products
+          </Link>
           <span>/</span>
           <Link
             href={`/product?category=${product.category.toLowerCase()}`}
@@ -234,12 +284,13 @@ export default function ProductDetailPage() {
             {product.category}
           </Link>
           <span>/</span>
-          <span className="text-zinc-700 font-medium line-clamp-1">{product.name}</span>
+          <span className="text-zinc-700 font-medium line-clamp-1">
+            {product.name}
+          </span>
         </motion.div>
 
         {/* ── Main Grid ─────────────────────────────────────────────────── */}
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 lg:items-start">
-
           {/* Left — Image Gallery: sticky, full viewport height */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -249,7 +300,6 @@ export default function ProductDetailPage() {
           >
             {/* Thumbnail strip + main image side by side */}
             <div className="flex gap-3">
-
               {/* Vertical thumbnail strip */}
               <div className="hidden sm:flex flex-col gap-2.5 shrink-0">
                 {product.images.map((img, i) => (
@@ -257,13 +307,17 @@ export default function ProductDetailPage() {
                     key={i}
                     onClick={() => setActiveImage(i)}
                     className={cn(
-                    "relative h-22 w-22 overflow-hidden rounded-2xl border-2 transition-all duration-200",
+                      "relative h-22 w-22 overflow-hidden rounded-2xl border-2 transition-all duration-200",
                       activeImage === i
                         ? "border-primary-600 shadow-md"
-                        : "border-zinc-200 opacity-60 hover:opacity-100 hover:border-primary-300"
+                        : "border-zinc-200 opacity-60 hover:opacity-100 hover:border-primary-300",
                     )}
                   >
-                    <img src={img} alt={`View ${i + 1}`} className="h-full w-full object-cover" />
+                    <img
+                      src={img}
+                      alt={`View ${i + 1}`}
+                      className="h-full w-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -314,10 +368,14 @@ export default function ProductDetailPage() {
                     "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200",
                     activeImage === i
                       ? "border-primary-600 shadow-md"
-                      : "border-zinc-200 opacity-60 hover:opacity-100"
+                      : "border-zinc-200 opacity-60 hover:opacity-100",
                   )}
                 >
-                  <img src={img} alt={`View ${i + 1}`} className="h-full w-full object-cover" />
+                  <img
+                    src={img}
+                    alt={`View ${i + 1}`}
+                    className="h-full w-full object-cover"
+                  />
                 </button>
               ))}
             </div>
@@ -345,7 +403,7 @@ export default function ProductDetailPage() {
                     "flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all duration-150",
                     isFav
                       ? "border-primary-600 bg-primary-600 text-white"
-                      : "border-primary-200 bg-white text-primary-600 hover:border-primary-400 hover:bg-primary-50"
+                      : "border-primary-200 bg-white text-primary-600 hover:border-primary-400 hover:bg-primary-50",
                   )}
                 >
                   <IconHeart size={18} fill={isFav ? "currentColor" : "none"} />
@@ -358,11 +416,21 @@ export default function ProductDetailPage() {
                 >
                   <AnimatePresence mode="wait">
                     {copied ? (
-                      <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                      <motion.span
+                        key="check"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                      >
                         <IconCheck size={16} className="text-successDark" />
                       </motion.span>
                     ) : (
-                      <motion.span key="share" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                      <motion.span
+                        key="share"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                      >
                         <IconShare size={16} />
                       </motion.span>
                     )}
@@ -379,9 +447,18 @@ export default function ProductDetailPage() {
             {/* Rating Row */}
             <div className="flex flex-wrap items-center gap-3">
               <StarRating rating={product.rating} />
-              <span className="text-sm font-semibold text-zinc-700">{product.rating.toFixed(1)}</span>
-              <span className="text-sm text-zinc-400">({product.reviewCount} reviews)</span>
-              <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", CARE_COLORS[product.careLevel])}>
+              <span className="text-sm font-semibold text-zinc-700">
+                {product.rating.toFixed(1)}
+              </span>
+              <span className="text-sm text-zinc-400">
+                ({product.reviewCount} reviews)
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                  CARE_COLORS[product.careLevel],
+                )}
+              >
                 {product.careLevel} care
               </span>
             </div>
@@ -404,7 +481,9 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Description */}
-            <p className="text-sm leading-relaxed text-zinc-600">{product.description}</p>
+            <p className="text-sm leading-relaxed text-zinc-600">
+              {product.description}
+            </p>
 
             {/* Size Selector — indoor plants only */}
             <AnimatePresence>
@@ -435,19 +514,25 @@ export default function ProductDetailPage() {
                       <motion.button
                         key={s}
                         whileTap={{ scale: 0.93 }}
-                        onClick={() => setSelectedSize(s === selectedSize ? null : s)}
+                        onClick={() =>
+                          setSelectedSize(s === selectedSize ? null : s)
+                        }
                         className={cn(
                           "relative flex flex-col items-center gap-1.5 rounded-xl border-2 px-5 py-3 text-sm font-semibold transition-all duration-200",
                           selectedSize === s
                             ? "border-primary-600 bg-primary-600 text-white shadow-md shadow-primary-600/25"
-                            : "border-zinc-200 bg-white text-zinc-700 hover:border-primary-300 hover:bg-primary-50"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-primary-300 hover:bg-primary-50",
                         )}
                       >
                         <span className="text-base font-bold">{s}</span>
-                        <span className={cn(
-                          "text-[10px] font-medium",
-                          selectedSize === s ? "text-primary-100" : "text-zinc-400"
-                        )}>
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium",
+                            selectedSize === s
+                              ? "text-primary-100"
+                              : "text-zinc-400",
+                          )}
+                        >
                           {s === '4"' ? "~10 cm" : "~15 cm"}
                         </span>
                         {selectedSize === s && (
@@ -464,7 +549,8 @@ export default function ProductDetailPage() {
                     ))}
                   </div>
                   <p className="mt-2.5 text-[11px] text-zinc-400">
-                    Pot diameter measured at the rim. Plants are shipped in nursery pots.
+                    Pot diameter measured at the rim. Plants are shipped in
+                    nursery pots.
                   </p>
                 </motion.div>
               )}
@@ -502,8 +588,12 @@ export default function ProductDetailPage() {
                   label: "Pet Safe",
                   value: product.petFriendly ? "Yes" : "No",
                   iconBg: product.petFriendly ? "bg-green-50" : "bg-red-50",
-                  iconColor: product.petFriendly ? "text-green-600" : "text-red-500",
-                  valueClass: product.petFriendly ? "text-green-700" : "text-red-600",
+                  iconColor: product.petFriendly
+                    ? "text-green-600"
+                    : "text-red-500",
+                  valueClass: product.petFriendly
+                    ? "text-green-700"
+                    : "text-red-600",
                   accent: product.petFriendly
                     ? "hover:border-green-200 hover:bg-green-50/60"
                     : "hover:border-red-200 hover:bg-red-50/60",
@@ -517,24 +607,41 @@ export default function ProductDetailPage() {
                   whileHover={{ y: -3, scale: 1.03 }}
                   className={cn(
                     "group flex flex-col items-center gap-2 rounded-2xl border border-primary-100 bg-white px-3 py-4 text-center cursor-default transition-colors duration-200 shadow-sm",
-                    spec.accent
+                    spec.accent,
                   )}
                 >
                   <motion.div
                     whileHover={{ rotate: [0, -10, 10, -6, 0] }}
                     transition={{ duration: 0.5 }}
-                    className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-200", spec.iconBg)}
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-200",
+                      spec.iconBg,
+                    )}
                   >
                     <spec.icon size={20} className={spec.iconColor} />
                   </motion.div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 group-hover:text-zinc-500 transition-colors">{spec.label}</span>
-                  <span className={cn("text-xs font-semibold leading-tight text-zinc-700", spec.valueClass)}>{spec.value}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 group-hover:text-zinc-500 transition-colors">
+                    {spec.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs font-semibold leading-tight text-zinc-700",
+                      spec.valueClass,
+                    )}
+                  >
+                    {spec.value}
+                  </span>
                 </motion.div>
               ))}
             </div>
 
             {/* Stock */}
-            <p className={cn("text-sm font-medium", product.stock <= 5 ? "text-errorDark" : "text-successDark")}>
+            <p
+              className={cn(
+                "text-sm font-medium",
+                product.stock <= 5 ? "text-errorDark" : "text-successDark",
+              )}
+            >
               {product.stock <= 5
                 ? `Only ${product.stock} left in stock — order soon`
                 : `In stock (${product.stock} available)`}
@@ -550,9 +657,13 @@ export default function ProductDetailPage() {
                 >
                   <IconMinus size={16} />
                 </button>
-                <span className="w-10 text-center text-sm font-semibold text-zinc-900">{quantity}</span>
+                <span className="w-10 text-center text-sm font-semibold text-zinc-900">
+                  {quantity}
+                </span>
                 <button
-                  onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                  onClick={() =>
+                    setQuantity((q) => Math.min(product.stock, q + 1))
+                  }
                   className="flex h-11 w-11 items-center justify-center text-primary-600 hover:bg-primary-50 transition-colors"
                 >
                   <IconPlus size={16} />
@@ -567,11 +678,23 @@ export default function ProductDetailPage() {
               >
                 <AnimatePresence mode="wait">
                   {addedToCart ? (
-                    <motion.span key="done" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
+                    <motion.span
+                      key="done"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="flex items-center gap-2"
+                    >
                       <IconCheck size={18} /> Added!
                     </motion.span>
                   ) : (
-                    <motion.span key="add" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
+                    <motion.span
+                      key="add"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="flex items-center gap-2"
+                    >
                       <IconShoppingCart size={18} /> Add to Bag
                     </motion.span>
                   )}
@@ -586,7 +709,10 @@ export default function ProductDetailPage() {
                 { icon: IconShieldCheck, text: "Plant health guarantee" },
                 { icon: IconRefresh, text: "7-day easy returns" },
               ].map((badge) => (
-                <div key={badge.text} className="flex items-center gap-2 text-xs text-zinc-500">
+                <div
+                  key={badge.text}
+                  className="flex items-center gap-2 text-xs text-zinc-500"
+                >
                   <badge.icon size={16} className="text-primary-500 shrink-0" />
                   <span>{badge.text}</span>
                 </div>
@@ -612,10 +738,15 @@ export default function ProductDetailPage() {
               ₹{product.price.toLocaleString("en-IN")}
             </p>
             {product.originalPrice && (
-              <p className="text-xs text-zinc-400 line-through">₹{product.originalPrice.toLocaleString("en-IN")}</p>
+              <p className="text-xs text-zinc-400 line-through">
+                ₹{product.originalPrice.toLocaleString("en-IN")}
+              </p>
             )}
           </div>
-          <Button onClick={handleAddToCart} className="rounded-full px-8 font-semibold shadow-md shadow-primary-600/20">
+          <Button
+            onClick={handleAddToCart}
+            className="rounded-full px-8 font-semibold shadow-md shadow-primary-600/20"
+          >
             <IconShoppingCart size={18} />
             Add to Bag
           </Button>
@@ -629,14 +760,21 @@ export default function ProductDetailPage() {
 }
 
 // ── Related Products ─────────────────────────────────────────────────────────
-function RelatedProducts({ category, currentId }: { category: string; currentId: string }) {
+function RelatedProducts({
+  category,
+  currentId,
+}: {
+  category: string;
+  currentId: string;
+}) {
   const img = CATEGORY_IMAGES[category.toLowerCase()] ?? "/category-plant.webp";
 
   const related = Array.from({ length: 4 }, (_, i) => ({
     id: `${category.toLowerCase()}-rel-${i + 1}`,
     name: `${category} Plant ${i + 1}`,
     price: Math.floor(Math.random() * 400) + 150,
-    originalPrice: Math.random() > 0.5 ? Math.floor(Math.random() * 300) + 400 : undefined,
+    originalPrice:
+      Math.random() > 0.5 ? Math.floor(Math.random() * 300) + 400 : undefined,
     image: img,
     rating: parseFloat((Math.random() * 1.5 + 3.5).toFixed(1)),
     reviewCount: Math.floor(Math.random() * 200) + 10,

@@ -182,7 +182,7 @@ export default function NavbarDesktop() {
                 )}
               </Link>
             ))}
-
+            
             {/* Bag button */}
             <button
               type="button"

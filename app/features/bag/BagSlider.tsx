@@ -16,24 +16,42 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useBag } from "@/context/BagContext";
-import { useDeliveryAddress, type DeliveryAddress, EMPTY_ADDRESS } from "./useDeliveryAddress";
+import {
+  useDeliveryAddress,
+  type DeliveryAddress,
+  EMPTY_ADDRESS,
+} from "./useDeliveryAddress";
 
 export default function BagSlider() {
   const { isBagOpen, closeBag, items, removeItem, updateQty } = useBag();
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<null | { code: string; percent: number }>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<null | {
+    code: string;
+    percent: number;
+  }>(null);
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   // ── Delivery address ──────────────────────────────────────────────────────
-  const { address, updateAddress } = useDeliveryAddress();
-  const [view, setView] = useState<"bag" | "address-edit">("bag");
+  const { address, addresses, setSelectedAddress, addAddress } =
+    useDeliveryAddress();
+  const [view, setView] = useState<"bag" | "address-list" | "address-edit">(
+    "bag",
+  );
   const [draft, setDraft] = useState<DeliveryAddress>(EMPTY_ADDRESS);
-  const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof DeliveryAddress, string>>>({});
+  const [addressErrors, setAddressErrors] = useState<
+    Partial<Record<keyof DeliveryAddress, string>>
+  >({});
 
   const openAddressEdit = () => {
-    setDraft(address ?? EMPTY_ADDRESS);
+    setDraft(EMPTY_ADDRESS);
+    setAddressErrors({});
+    setView("address-edit");
+  };
+
+  const openNewAddress = () => {
+    setDraft(EMPTY_ADDRESS);
     setAddressErrors({});
     setView("address-edit");
   };
@@ -42,73 +60,99 @@ export default function BagSlider() {
     const errs: Partial<Record<keyof DeliveryAddress, string>> = {};
     if (!draft.fullName.trim()) errs.fullName = "Full name is required.";
     if (!draft.phone.trim()) errs.phone = "Phone is required.";
-    else if (!/^\d{10}$/.test(draft.phone.trim())) errs.phone = "Enter a valid 10-digit number.";
+    else if (!/^\d{10}$/.test(draft.phone.trim()))
+      errs.phone = "Enter a valid 10-digit number.";
     if (!draft.line1.trim()) errs.line1 = "Address line 1 is required.";
     if (!draft.city.trim()) errs.city = "City is required.";
     if (!draft.state.trim()) errs.state = "State is required.";
     if (!draft.pincode.trim()) errs.pincode = "Pincode is required.";
-    else if (!/^\d{6}$/.test(draft.pincode.trim())) errs.pincode = "Enter a valid 6-digit pincode.";
-    if (Object.keys(errs).length) { setAddressErrors(errs); return; }
-    updateAddress(draft);
+    else if (!/^\d{6}$/.test(draft.pincode.trim()))
+      errs.pincode = "Enter a valid 6-digit pincode.";
+    if (Object.keys(errs).length) {
+      setAddressErrors(errs);
+      return;
+    }
+    addAddress(draft);
     setView("bag");
   };
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
-  const discountAmount = appliedCoupon ? (subtotal * appliedCoupon.percent) / 100 : 0;
+  const discountAmount = appliedCoupon
+    ? (subtotal * appliedCoupon.percent) / 100
+    : 0;
   const taxableAmount = Math.max(subtotal - discountAmount, 0);
   const taxAmount = taxableAmount * 0.18;
-  const shippingAmount = taxableAmount > 0 ? (taxableAmount >= 999 ? 0 : 79) : 0;
+  const shippingAmount =
+    taxableAmount > 0 ? (taxableAmount >= 999 ? 0 : 79) : 0;
   const finalTotal = taxableAmount + taxAmount + shippingAmount;
 
-  const couponMap: Record<string, number> = {
-    SAVE10: 10,
-    GREEN5: 5,
-    PLANT15: 15,
-  };
-
   const applyCoupon = async () => {
-    if (items.length === 0) {
-      setCouponError("Add items to your bag before applying a coupon.");
-      setCouponSuccess("");
-      return;
-    }
+  if (items.length === 0) {
+    setCouponError("Add items to your bag before applying a coupon.");
+    setCouponSuccess("");
+    return;
+  }
 
-    const normalizedCode = couponCode.trim().toUpperCase();
+  const normalizedCode = couponCode.trim().toUpperCase();
 
-    if (!normalizedCode) {
-      setCouponError("Please enter a coupon code.");
-      setCouponSuccess("");
-      return;
-    }
+  if (!normalizedCode) {
+    setCouponError("Please enter a coupon code.");
+    setCouponSuccess("");
+    return;
+  }
 
-    if (!/^[A-Z0-9]{4,12}$/.test(normalizedCode)) {
-      setCouponError("Coupon must be 4-12 letters or numbers.");
-      setCouponSuccess("");
-      return;
-    }
+  if (!/^[A-Z0-9]{4,12}$/.test(normalizedCode)) {
+    setCouponError("Coupon must be 4-12 letters or numbers.");
+    setCouponSuccess("");
+    return;
+  }
 
+  try {
     setIsApplyingCoupon(true);
     setCouponError("");
     setCouponSuccess("");
 
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    const res = await fetch("/api/coupons/validate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ code: normalizedCode }),
+    });
 
-    const percent = couponMap[normalizedCode];
+    const json = await res.json();
 
-    if (!percent) {
+    if (!res.ok || !json.success) {
+      throw new Error(json?.error || "Failed to validate coupon");
+    }
+
+    if (!json.data.valid) {
       setAppliedCoupon(null);
-      setCouponError("Invalid coupon code. Try SAVE10, GREEN5, or PLANT15.");
+      setCouponError(json.data.reason || "Invalid coupon code.");
       setCouponSuccess("");
-      setIsApplyingCoupon(false);
       return;
     }
 
-    setAppliedCoupon({ code: normalizedCode, percent });
-    setCouponSuccess(`Coupon ${normalizedCode} applied: ${percent}% off.`);
-    setCouponError("");
+    const percent = json.data.discountPct;
+
+    setAppliedCoupon({
+      code: normalizedCode,
+      percent,
+    });
+
+    setCouponSuccess(
+      `Coupon ${normalizedCode} applied: ${percent}% off.`
+    );
+  } catch (error) {
+    console.error("Coupon apply error:", error);
+    setAppliedCoupon(null);
+    setCouponError("Something went wrong. Please try again.");
+    setCouponSuccess("");
+  } finally {
     setIsApplyingCoupon(false);
-  };
+  }
+};
 
   // Lock body scroll while open
   useEffect(() => {
@@ -157,8 +201,14 @@ export default function BagSlider() {
             {/* ── Header ───────────────────────────────────────────────── */}
             <div className="flex items-center justify-between border-b border-primary-100 px-5 py-4">
               <div className="flex items-center gap-2.5">
-                <IconShoppingBag size={20} stroke={1.5} className="text-primary-600" />
-                <span className="font-mono text-base font-bold text-zinc-900">Your Bag</span>
+                <IconShoppingBag
+                  size={20}
+                  stroke={1.5}
+                  className="text-primary-600"
+                />
+                <span className="font-mono text-base font-bold text-zinc-900">
+                  Your Bag
+                </span>
                 {totalQty > 0 && (
                   <motion.span
                     key={totalQty}
@@ -187,7 +237,12 @@ export default function BagSlider() {
                 <motion.div
                   initial={{ scale: 0.85, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 24 }}
+                  transition={{
+                    delay: 0.1,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 24,
+                  }}
                   className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary-100"
                 >
                   <IconLeaf size={36} className="text-primary-500" />
@@ -197,7 +252,9 @@ export default function BagSlider() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.18 }}
                 >
-                  <p className="font-mono text-lg font-bold text-zinc-900">Your bag is empty</p>
+                  <p className="font-mono text-lg font-bold text-zinc-900">
+                    Your bag is empty
+                  </p>
                   <p className="mt-1 text-sm text-zinc-500">
                     Looks like you haven&apos;t added any plants yet.
                   </p>
@@ -257,7 +314,9 @@ export default function BagSlider() {
                               {item.name}
                             </p>
                             {item.variant && (
-                              <p className="mt-0.5 text-[11px] text-zinc-400">{item.variant}</p>
+                              <p className="mt-0.5 text-[11px] text-zinc-400">
+                                {item.variant}
+                              </p>
                             )}
                           </div>
                           {/* Remove */}
@@ -276,7 +335,9 @@ export default function BagSlider() {
                           <div className="flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-1 py-0.5">
                             <button
                               type="button"
-                              onClick={() => updateQty(item.id, item.quantity - 1)}
+                              onClick={() =>
+                                updateQty(item.id, item.quantity - 1)
+                              }
                               className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
                               aria-label="Decrease quantity"
                             >
@@ -292,7 +353,9 @@ export default function BagSlider() {
                             </motion.span>
                             <button
                               type="button"
-                              onClick={() => updateQty(item.id, item.quantity + 1)}
+                              onClick={() =>
+                                updateQty(item.id, item.quantity + 1)
+                              }
                               className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
                               aria-label="Increase quantity"
                             >
@@ -302,7 +365,10 @@ export default function BagSlider() {
 
                           {/* Line total */}
                           <p className="text-sm font-bold text-zinc-900">
-                            ₹{(item.price * item.quantity).toLocaleString("en-IN")}
+                            ₹
+                            {(item.price * item.quantity).toLocaleString(
+                              "en-IN",
+                            )}
                           </p>
                         </div>
                       </div>
@@ -318,31 +384,43 @@ export default function BagSlider() {
               <div className="mb-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
                 <div className="mb-1.5 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <IconMapPin size={13} stroke={1.5} className="text-primary-600" />
+                    <IconMapPin
+                      size={13}
+                      stroke={1.5}
+                      className="text-primary-600"
+                    />
                     <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                       Delivering to
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={openAddressEdit}
-                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary-600 transition-colors hover:bg-primary-100"
-                  >
-                    <IconPencil size={11} stroke={2} />
-                    {address ? "Change" : "Add"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setView("address-list")}
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary-600 hover:bg-primary-100"
+                    >
+                      <IconPencil size={11} stroke={2} />
+                      {address ? "Change" : "Add"}
+                    </button>
+                  </div>
                 </div>
                 {address ? (
                   <div className="space-y-0.5">
-                    <p className="text-sm font-semibold leading-snug text-zinc-800">{address.fullName}</p>
+                    <p className="text-sm font-semibold leading-snug text-zinc-800">
+                      {address.fullName}
+                    </p>
                     <p className="text-[11px] leading-relaxed text-zinc-500">
-                      {address.line1}{address.line2 ? `, ${address.line2}` : ""},{" "}
-                      {address.city}, {address.state}&nbsp;&ndash;&nbsp;{address.pincode}
+                      {address.line1}
+                      {address.line2 ? `, ${address.line2}` : ""},{" "}
+                      {address.city}, {address.state}&nbsp;&ndash;&nbsp;
+                      {address.pincode}
                     </p>
                     <p className="text-[11px] text-zinc-400">{address.phone}</p>
                   </div>
                 ) : (
-                  <p className="text-[11px] italic text-zinc-400">No delivery address added yet.</p>
+                  <p className="text-[11px] italic text-zinc-400">
+                    No delivery address added yet.
+                  </p>
                 )}
               </div>
 
@@ -392,10 +470,16 @@ export default function BagSlider() {
                 <p
                   id="coupon-feedback"
                   className={`mt-1 min-h-4 text-[11px] ${
-                    couponError ? "text-red-500" : couponSuccess ? "text-emerald-600" : "text-zinc-400"
+                    couponError
+                      ? "text-red-500"
+                      : couponSuccess
+                        ? "text-emerald-600"
+                        : "text-zinc-400"
                   }`}
                 >
-                  {couponError || couponSuccess || "Use SAVE10, GREEN5, or PLANT15"}
+                  {couponError ||
+                    couponSuccess ||
+                    "Use SAVE10, GREEN5, or PLANT15"}
                 </p>
               </div>
 
@@ -412,20 +496,28 @@ export default function BagSlider() {
               </div>
               {appliedCoupon && discountAmount > 0 && (
                 <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="text-zinc-500 font-medium">Discount ({appliedCoupon.code})</span>
+                  <span className="text-zinc-500 font-medium">
+                    Discount ({appliedCoupon.code})
+                  </span>
                   <span className="font-bold text-emerald-700">
                     -₹{discountAmount.toLocaleString("en-IN")}
                   </span>
                 </div>
               )}
               <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="text-zinc-500 font-medium">Taxes (GST 18%)</span>
-                <span className="font-bold text-zinc-900">₹{taxAmount.toLocaleString("en-IN")}</span>
+                <span className="text-zinc-500 font-medium">
+                  Taxes (GST 18%)
+                </span>
+                <span className="font-bold text-zinc-900">
+                  ₹{taxAmount.toLocaleString("en-IN")}
+                </span>
               </div>
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="text-zinc-500 font-medium">Shipping</span>
                 <span className="font-bold text-zinc-900">
-                  {shippingAmount === 0 ? "Free" : `₹${shippingAmount.toLocaleString("en-IN")}`}
+                  {shippingAmount === 0
+                    ? "Free"
+                    : `₹${shippingAmount.toLocaleString("en-IN")}`}
                 </span>
               </div>
               <div className="mb-1 flex items-center justify-between text-sm">
@@ -476,8 +568,14 @@ export default function BagSlider() {
                       <IconChevronLeft size={20} stroke={1.5} />
                     </button>
                     <div className="flex items-center gap-2">
-                      <IconMapPin size={18} stroke={1.5} className="text-primary-600" />
-                      <span className="font-mono text-base font-bold text-zinc-900">Delivery Address</span>
+                      <IconMapPin
+                        size={18}
+                        stroke={1.5}
+                        className="text-primary-600"
+                      />
+                      <span className="font-mono text-base font-bold text-zinc-900">
+                        Delivery Address
+                      </span>
                     </div>
                   </div>
 
@@ -490,14 +588,20 @@ export default function BagSlider() {
                       </label>
                       <input
                         value={draft.fullName}
-                        onChange={(e) => setDraft((d) => ({ ...d, fullName: e.target.value }))}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, fullName: e.target.value }))
+                        }
                         placeholder="Sami Khan"
                         className={`h-10 w-full rounded-xl border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500 ${
-                          addressErrors.fullName ? "border-red-400" : "border-zinc-200"
+                          addressErrors.fullName
+                            ? "border-red-400"
+                            : "border-zinc-200"
                         }`}
                       />
                       {addressErrors.fullName && (
-                        <p className="mt-0.5 text-[11px] text-red-500">{addressErrors.fullName}</p>
+                        <p className="mt-0.5 text-[11px] text-red-500">
+                          {addressErrors.fullName}
+                        </p>
                       )}
                     </div>
 
@@ -508,16 +612,22 @@ export default function BagSlider() {
                       </label>
                       <input
                         value={draft.phone}
-                        onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, phone: e.target.value }))
+                        }
                         placeholder="9876543210"
                         type="tel"
                         maxLength={10}
                         className={`h-10 w-full rounded-xl border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500 ${
-                          addressErrors.phone ? "border-red-400" : "border-zinc-200"
+                          addressErrors.phone
+                            ? "border-red-400"
+                            : "border-zinc-200"
                         }`}
                       />
                       {addressErrors.phone && (
-                        <p className="mt-0.5 text-[11px] text-red-500">{addressErrors.phone}</p>
+                        <p className="mt-0.5 text-[11px] text-red-500">
+                          {addressErrors.phone}
+                        </p>
                       )}
                     </div>
 
@@ -528,14 +638,20 @@ export default function BagSlider() {
                       </label>
                       <input
                         value={draft.line1}
-                        onChange={(e) => setDraft((d) => ({ ...d, line1: e.target.value }))}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, line1: e.target.value }))
+                        }
                         placeholder="House / Flat no., Street"
                         className={`h-10 w-full rounded-xl border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500 ${
-                          addressErrors.line1 ? "border-red-400" : "border-zinc-200"
+                          addressErrors.line1
+                            ? "border-red-400"
+                            : "border-zinc-200"
                         }`}
                       />
                       {addressErrors.line1 && (
-                        <p className="mt-0.5 text-[11px] text-red-500">{addressErrors.line1}</p>
+                        <p className="mt-0.5 text-[11px] text-red-500">
+                          {addressErrors.line1}
+                        </p>
                       )}
                     </div>
 
@@ -543,11 +659,15 @@ export default function BagSlider() {
                     <div>
                       <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                         Address line 2{" "}
-                        <span className="normal-case text-zinc-300">(optional)</span>
+                        <span className="normal-case text-zinc-300">
+                          (optional)
+                        </span>
                       </label>
                       <input
                         value={draft.line2}
-                        onChange={(e) => setDraft((d) => ({ ...d, line2: e.target.value }))}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, line2: e.target.value }))
+                        }
                         placeholder="Landmark, Area"
                         className="h-10 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500"
                       />
@@ -561,14 +681,20 @@ export default function BagSlider() {
                         </label>
                         <input
                           value={draft.city}
-                          onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))}
+                          onChange={(e) =>
+                            setDraft((d) => ({ ...d, city: e.target.value }))
+                          }
                           placeholder="Mumbai"
                           className={`h-10 w-full rounded-xl border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500 ${
-                            addressErrors.city ? "border-red-400" : "border-zinc-200"
+                            addressErrors.city
+                              ? "border-red-400"
+                              : "border-zinc-200"
                           }`}
                         />
                         {addressErrors.city && (
-                          <p className="mt-0.5 text-[11px] text-red-500">{addressErrors.city}</p>
+                          <p className="mt-0.5 text-[11px] text-red-500">
+                            {addressErrors.city}
+                          </p>
                         )}
                       </div>
                       <div>
@@ -577,14 +703,20 @@ export default function BagSlider() {
                         </label>
                         <input
                           value={draft.state}
-                          onChange={(e) => setDraft((d) => ({ ...d, state: e.target.value }))}
+                          onChange={(e) =>
+                            setDraft((d) => ({ ...d, state: e.target.value }))
+                          }
                           placeholder="Maharashtra"
                           className={`h-10 w-full rounded-xl border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500 ${
-                            addressErrors.state ? "border-red-400" : "border-zinc-200"
+                            addressErrors.state
+                              ? "border-red-400"
+                              : "border-zinc-200"
                           }`}
                         />
                         {addressErrors.state && (
-                          <p className="mt-0.5 text-[11px] text-red-500">{addressErrors.state}</p>
+                          <p className="mt-0.5 text-[11px] text-red-500">
+                            {addressErrors.state}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -596,16 +728,22 @@ export default function BagSlider() {
                       </label>
                       <input
                         value={draft.pincode}
-                        onChange={(e) => setDraft((d) => ({ ...d, pincode: e.target.value }))}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, pincode: e.target.value }))
+                        }
                         placeholder="400001"
                         type="text"
                         maxLength={6}
                         className={`h-10 w-full rounded-xl border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500 ${
-                          addressErrors.pincode ? "border-red-400" : "border-zinc-200"
+                          addressErrors.pincode
+                            ? "border-red-400"
+                            : "border-zinc-200"
                         }`}
                       />
                       {addressErrors.pincode && (
-                        <p className="mt-0.5 text-[11px] text-red-500">{addressErrors.pincode}</p>
+                        <p className="mt-0.5 text-[11px] text-red-500">
+                          {addressErrors.pincode}
+                        </p>
                       )}
                     </div>
                   </div>

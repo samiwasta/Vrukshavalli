@@ -8,27 +8,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useSession } from "@/lib/auth-client";
 
-/**
- * TODO BACKEND DEVELOPER - Wishlist persistence
- *
- * TASK:
- * - Add backend storage for wishlist items per user (e.g. wishlist table: userId, productId, createdAt).
- * - Expose API: GET /api/wishlist (list for current user), POST /api/wishlist (add), DELETE /api/wishlist/[productId] (remove).
- * - Require auth for all wishlist API routes; return 401 when unauthenticated.
- * - Once API exists, replace localStorage in this context with fetch calls; on mount load from API if
- *   session exists, else keep current localStorage for guest; on login merge guest wishlist into user
- *   wishlist and clear local storage.
- *
- * EDGE CASES:
- * - Guest user: keep current localStorage behaviour until login; after login merge and sync.
- * - Duplicate add: backend should upsert or return 409; frontend should not add duplicate.
- * - Product deleted: API can return 404 for product id; frontend should remove from list or show
- *   "no longer available".
- * - Session expiry during request: return 401; frontend should clear or fall back to guest state.
- */
 export interface WishlistItem {
-  id: string | number;
+  id: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -45,85 +28,124 @@ const STORAGE_KEY = "vrikshavalli-wishlist";
 
 interface WishlistContextValue {
   items: WishlistItem[];
-  has: (id: string | number) => boolean;
-  add: (item: WishlistItem) => void;
-  remove: (id: string | number) => void;
+  has: (id: string) => boolean;
   toggle: (item: WishlistItem) => void;
 }
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 
 function loadStored(): WishlistItem[] {
-  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
 function saveStored(items: WishlistItem[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    //
-  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
+  const { data: session, isPending } = useSession();
+
   const [items, setItems] = useState<WishlistItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  const isLoggedIn = !!session?.user;
+
+  // ================= INITIAL LOAD =================
 
   useEffect(() => {
-    setItems(loadStored());
-    setHydrated(true);
-  }, []);
+    if (isPending) return;
+
+    const load = async () => {
+      // LOGGED IN → always trust DB
+      if (session?.user) {
+        const res = await fetch("/api/wishlist", {
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          setItems(json.data || []);
+        }
+
+        setReady(true);
+        return;
+      }
+
+      // GUEST
+      if (session === null) {
+        setItems(loadStored());
+        setReady(true);
+      }
+    };
+
+    load();
+  }, [session, isPending]);
+
+  // ================= PERSIST GUEST =================
 
   useEffect(() => {
-    if (hydrated) saveStored(items);
-  }, [hydrated, items]);
+    if (!ready || isLoggedIn) return;
+    saveStored(items);
+  }, [items, ready, isLoggedIn]);
+
+  // ================= HELPERS =================
 
   const has = useCallback(
-    (id: string | number) => items.some((i) => String(i.id) === String(id)),
+    (id: string) => items.some((i) => i.id === id),
     [items]
   );
 
-  const add = useCallback((item: WishlistItem) => {
-    setItems((prev) => {
-      if (prev.some((i) => String(i.id) === String(item.id))) return prev;
-      return [...prev, item];
-    });
-  }, []);
+  // ================= TOGGLE =================
 
-  const remove = useCallback((id: string | number) => {
-    setItems((prev) => prev.filter((i) => String(i.id) !== String(id)));
-  }, []);
+  const toggle = useCallback(
+    async (item: WishlistItem) => {
+      const exists = items.some((i) => i.id === item.id);
 
-  const toggle = useCallback((item: WishlistItem) => {
-    setItems((prev) => {
-      const exists = prev.some((i) => String(i.id) === String(item.id));
-      if (exists) return prev.filter((i) => String(i.id) !== String(item.id));
-      return [...prev, item];
-    });
-  }, []);
+      // ⭐ optimistic UI
+      if (exists) {
+        setItems((prev) => prev.filter((i) => i.id !== item.id));
+      } else {
+        setItems((prev) => [...prev, item]);
+      }
 
-  const value: WishlistContextValue = { items, has, add, remove, toggle };
+      // 👤 guest → done
+      if (!isLoggedIn) return;
+
+      // 🔐 logged in → sync server
+      if (exists) {
+        await fetch(`/api/wishlist/${item.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+      } else {
+        await fetch("/api/wishlist", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: item.id }),
+        });
+      }
+    },
+    [items, isLoggedIn]
+  );
 
   return (
-    <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
+    <WishlistContext.Provider value={{ items, has, toggle }}>
+      {children}
+    </WishlistContext.Provider>
   );
 }
 
-export function useWishlist(): WishlistContextValue {
+export function useWishlist() {
   const ctx = useContext(WishlistContext);
-  if (!ctx) throw new Error("useWishlist must be used within WishlistProvider");
+  if (!ctx) {
+    throw new Error("useWishlist must be used within WishlistProvider");
+  }
   return ctx;
-}
-
-export function useWishlistOptional(): WishlistContextValue | null {
-  return useContext(WishlistContext);
 }

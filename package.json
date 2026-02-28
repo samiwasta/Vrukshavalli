@@ -15,9 +15,11 @@
   "dependencies": {
     "@google/genai": "^1.42.0",
     "@neondatabase/serverless": "^1.0.2",
+    "@radix-ui/react-slot": "^1.2.4",
     "@tabler/icons-react": "^3.36.1",
     "better-auth": "^1.4.18",
     "clsx": "^2.1.1",
+    "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",
     "motion": "^12.33.0",

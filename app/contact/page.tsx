@@ -146,13 +146,28 @@ export default function ContactPage() {
     setForm((prev) => ({ ...prev, [key]: v }));
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    // TODO: Wire up to real API endpoint
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
+  e.preventDefault();
+  setLoading(true);
+
+  const res = await fetch("/api/contact", {
+    method: "POST",
+    body: JSON.stringify({
+      name: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      subject: form.subject,
+      message: form.message,
+    }),
+  });
+
+  const json = await res.json();
+
+  setLoading(false);
+
+  if (json.success) {
     setSubmitted(true);
-  };
+  }
+};
 
   return (
     <div className="min-h-screen bg-background">
