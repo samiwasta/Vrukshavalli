@@ -13,13 +13,21 @@ export const coupons = pgTable("coupons", {
 
   code: text("code").notNull().unique(),
 
+  /** "percentage" → discountPct is a %, "flat" → discountPct is a ₹ amount */
+  discountType: text("discount_type").notNull().default("percentage"),
+
   discountPct: integer("discount_pct").notNull(),
+
+  description: text("description"),
 
   maxUses: integer("max_uses"),
 
   usedCount: integer("used_count").default(0).notNull(),
 
   expiresAt: timestamp("expires_at"),
+
+  /** If true, only customers with zero previous orders can use this coupon */
+  newUsersOnly: boolean("new_users_only").default(false).notNull(),
 
   isActive: boolean("is_active").default(true).notNull(),
 

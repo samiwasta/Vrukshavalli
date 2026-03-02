@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { IconMenu2, IconShoppingBag, IconX, IconSparkles } from "@tabler/icons-react";
+import { IconMenu2, IconShoppingBag, IconX, IconSparkles, IconLogout } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
 import { useWishlist } from "@/context/WishlistContext";
-import { useSession } from "@/lib/auth-client";
+import { useSession, signOut } from "@/lib/auth-client";
 import { useBag } from "@/context/BagContext";
 
 interface NavItem {
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const SIDEBAR_LINKS_LOGGED_IN = [
   { label: "My Profile", href: "/profile" },
+  { label: "My Orders", href: "/orders" },
 ];
 
 export default function NavbarMobile() {
@@ -37,9 +39,16 @@ export default function NavbarMobile() {
   const { items: wishlistItems } = useWishlist();
   const { data: session } = useSession();
   const { openBag } = useBag();
+  const router = useRouter();
   const wishlistCount = wishlistItems.length;
 
   const closeMenu = () => setMenuOpen(false);
+
+  const handleLogout = async () => {
+    await signOut();
+    closeMenu();
+    router.push("/");
+  };
 
   useEffect(() => {
     if (menuOpen) {
@@ -163,6 +172,13 @@ export default function NavbarMobile() {
                           {item.label}
                         </Link>
                       ))}
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 font-sans"
+                      >
+                        <IconLogout size={16} stroke={1.5} />
+                        Logout
+                      </button>
                     </>
                   ) : (
                     <Link

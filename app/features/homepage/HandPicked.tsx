@@ -53,8 +53,6 @@ export default function HandPicked() {
     load();
   }, []);
 
-  if (!products.length) return null;
-
   return (
     <section className="container mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-8">
@@ -76,7 +74,13 @@ export default function HandPicked() {
       </div>
 
       <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4">
-        {products.map((product, index) => (
+        {products.length === 0 ? (
+          <div className="w-full py-16 flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <span className="text-4xl">🌿</span>
+            <p className="text-base font-medium">No Products Yet</p>
+            <p className="text-sm text-gray-400">Our curators are making their picks!</p>
+          </div>
+        ) : products.map((product, index) => (
           <motion.div
             key={product.id}
             className="w-65 sm:w-70 md:w-75 lg:w-80 shrink-0"

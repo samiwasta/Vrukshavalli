@@ -3,6 +3,7 @@ import { Poppins, Bricolage_Grotesque } from "next/font/google";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { BagProvider } from "@/context/BagContext";
 import BagSlider from "@/app/features/bag/BagSlider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -37,6 +38,16 @@ export default function RootLayout({
           <BagProvider>
             {children}
             <BagSlider />
+            <Toaster
+              richColors
+              position="bottom-right"
+              offset={20}
+              mobileOffset={16}
+              visibleToasts={3}
+              toastOptions={{
+                className: "!rounded-xl !shadow-lg",
+              }}
+            />
           </BagProvider>
         </WishlistProvider>
       </body>

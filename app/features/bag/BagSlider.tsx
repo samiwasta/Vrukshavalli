@@ -27,7 +27,9 @@ export default function BagSlider() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<null | {
     code: string;
-    percent: number;
+    discountType: "percentage" | "flat";
+    discountValue: number;
+    description?: string | null;
   }>(null);
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
@@ -79,7 +81,9 @@ export default function BagSlider() {
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
   const discountAmount = appliedCoupon
-    ? (subtotal * appliedCoupon.percent) / 100
+    ? appliedCoupon.discountType === "flat"
+      ? Math.min(appliedCoupon.discountValue, subtotal)
+      : (subtotal * appliedCoupon.discountValue) / 100
     : 0;
   const taxableAmount = Math.max(subtotal - discountAmount, 0);
   const taxAmount = taxableAmount * 0.18;
@@ -134,16 +138,18 @@ export default function BagSlider() {
       return;
     }
 
-    const percent = json.data.discountPct;
+    const { discountType, discountValue, description } = json.data;
 
     setAppliedCoupon({
       code: normalizedCode,
-      percent,
+      discountType,
+      discountValue,
+      description,
     });
 
-    setCouponSuccess(
-      `Coupon ${normalizedCode} applied: ${percent}% off.`
-    );
+    const discountLabel =
+      discountType === "flat" ? `₹${discountValue} off` : `${discountValue}% off`;
+    setCouponSuccess(`Coupon ${normalizedCode} applied: ${discountLabel}.`);
   } catch (error) {
     console.error("Coupon apply error:", error);
     setAppliedCoupon(null);
@@ -495,13 +501,18 @@ export default function BagSlider() {
                 </motion.span>
               </div>
               {appliedCoupon && discountAmount > 0 && (
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="text-zinc-500 font-medium">
-                    Discount ({appliedCoupon.code})
-                  </span>
-                  <span className="font-bold text-emerald-700">
-                    -₹{discountAmount.toLocaleString("en-IN")}
-                  </span>
+                <div className="mb-1 flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500 font-medium">
+                      Discount ({appliedCoupon.code})
+                    </span>
+                    <span className="font-bold text-emerald-700">
+                      -₹{discountAmount.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  {appliedCoupon.description && (
+                    <p className="text-xs text-zinc-400 pl-0.5">{appliedCoupon.description}</p>
+                  )}
                 </div>
               )}
               <div className="mb-1 flex items-center justify-between text-sm">

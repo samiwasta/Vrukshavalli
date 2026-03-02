@@ -21,6 +21,7 @@ export const addresses = pgTable("addresses", {
   city: text("city").notNull(),
   state: text("state").notNull(),
   pincode: text("pincode").notNull(),
+  alias: text("alias"),
 
   isDefault: boolean("is_default").default(false),
 

@@ -2,35 +2,40 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { IconMail, IconLock, IconBrandGoogle } from "@tabler/icons-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
     const { error: err } = await authClient.signIn.email({
       email,
       password,
-      callbackURL: "/",
+      callbackURL: "/post-login",
     });
     setLoading(false);
-    if (err) setError(err.message ?? "Sign in failed");
+    if (err) {
+      toast.error(err.message ?? "Sign in failed");
+    } else {
+      toast.success("Welcome back! Redirecting...");
+      router.push("/post-login");
+    }
   };
 
   const handleGoogle = async () => {
-    setError("");
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/",
+      callbackURL: "/post-login",
     });
   };
 
@@ -135,15 +140,7 @@ export default function LoginPage() {
             />
           </div>
         </motion.div>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-sm font-medium text-red-600"
-          >
-            {error}
-          </motion.p>
-        )}
+
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

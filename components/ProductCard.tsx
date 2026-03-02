@@ -146,7 +146,45 @@ export default function ProductCard({
           {name}
         </h3>
 
-        {/* rating unchanged */}
+        {/* Rating */}
+        {rating > 0 && (
+          <div className="mb-2 flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span key={star}>
+                  {star <= Math.round(rating) ? (
+                    <IconStarFilled size={12} className="text-amber-400" />
+                  ) : (
+                    <IconStar size={12} className="text-gray-300" />
+                  )}
+                </span>
+              ))}
+            </div>
+            <span className="text-[11px] text-muted-foreground font-medium">
+              {rating.toFixed(1)}
+              {reviewCount > 0 && (
+                <span className="text-gray-400"> ({reviewCount})</span>
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* Price */}
+        <div className="mb-3 flex items-baseline gap-2">
+          <span className="text-base font-bold text-primary-700 sm:text-lg">
+            ₹{price.toLocaleString("en-IN")}
+          </span>
+          {originalPrice && originalPrice > price && (
+            <>
+              <span className="text-xs text-muted-foreground line-through sm:text-sm">
+                ₹{originalPrice.toLocaleString("en-IN")}
+              </span>
+              <span className="text-xs font-semibold text-green-600">
+                {discount}% off
+              </span>
+            </>
+          )}
+        </div>
 
         <div className="flex flex-col gap-2 xl:flex-row">
           <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

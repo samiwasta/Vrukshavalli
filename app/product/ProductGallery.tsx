@@ -25,6 +25,34 @@ export const PRODUCT_CATEGORIES = [
 
 export type ProductCategorySlug = (typeof PRODUCT_CATEGORIES)[number];
 
+export const CATEGORY_INFO: Record<ProductCategorySlug, { title: string; subtitle: string; emoji: string }> = {
+  plants: {
+    title: "Plants",
+    subtitle: "Discover our curated collection of indoor & outdoor plants",
+    emoji: "🌿",
+  },
+  seeds: {
+    title: "Seeds",
+    subtitle: "Premium quality seeds to grow your own garden",
+    emoji: "🌱",
+  },
+  "pots-planters": {
+    title: "Pots & Planters",
+    subtitle: "Beautiful pots and planters for every style",
+    emoji: "🪴",
+  },
+  "plant-care": {
+    title: "Plant Care",
+    subtitle: "Everything you need to keep your plants thriving",
+    emoji: "💚",
+  },
+  gifting: {
+    title: "Gifting",
+    subtitle: "Thoughtfully curated plant gifts for loved ones",
+    emoji: "🎁",
+  },
+};
+
 function getValidCategory(slug: string | null): ProductCategorySlug {
   if (slug && PRODUCT_CATEGORIES.includes(slug as ProductCategorySlug)) {
     return slug as ProductCategorySlug;
@@ -123,9 +151,12 @@ export default function ProductGallery() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 sm:px-6 py-10">
-          <div className="h-10 w-64 bg-primary-100 rounded-lg animate-pulse mb-8" />
-          <div className="grid grid-cols-1 min-[425px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-12 lg:py-14">
+          <div className="mb-8 sm:mb-10">
+            <div className="h-12 w-80 bg-primary-100 rounded-lg animate-pulse mb-3" />
+            <div className="h-4 w-96 bg-primary-50 rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 min-[425px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
@@ -140,14 +171,24 @@ export default function ProductGallery() {
 
   /* ───────────────── UI ───────────────── */
 
+  const categoryInfo = CATEGORY_INFO[category];
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-12 lg:py-14">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-primary-600 font-mono sm:text-3xl">
-            {category}
-          </h1>
+        <div className="mb-8 sm:mb-10">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-3xl sm:text-4xl" role="img" aria-label={categoryInfo.title}>
+              {categoryInfo.emoji}
+            </span>
+            <h1 className="text-3xl font-bold text-primary-700 font-mono sm:text-4xl lg:text-5xl">
+              {categoryInfo.title}
+            </h1>
+          </div>
+          <p className="text-sm sm:text-base text-primary-500/70 ml-0 sm:ml-14 max-w-2xl">
+            {categoryInfo.subtitle}
+          </p>
         </div>
 
         {/* Products Grid */}
@@ -167,11 +208,12 @@ export default function ProductGallery() {
         {/* Empty State */}
         {products.length === 0 && (
           <div className="py-20 text-center">
+            <span className="text-5xl mb-4 block opacity-40">{categoryInfo.emoji}</span>
             <h3 className="font-mono text-xl font-semibold text-primary-600">
-              No products found
+              No {categoryInfo.title.toLowerCase()} available
             </h3>
-            <p className="text-primary-500/60">
-              We’re currently updating this collection.
+            <p className="text-primary-500/60 mt-2">
+              We're currently updating our {categoryInfo.title.toLowerCase()} collection.
             </p>
           </div>
         )}

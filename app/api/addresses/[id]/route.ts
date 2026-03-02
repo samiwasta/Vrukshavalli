@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
 const addressSchema = z.object({
+  alias: z.string().optional(),
   fullName: z.string().min(1),
   phone: z.string().regex(/^\d{10}$/),
   line1: z.string().min(1),

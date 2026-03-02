@@ -23,8 +23,8 @@ const updateProfileSchema = z
   })
   .strict();
 
-export async function GET() {
-  const user = await getCurrentUser();
+export async function GET(req: Request) {
+  const user = await getCurrentUser(req);
 
   if (!user) {
     return NextResponse.json({ success: false }, { status: 401 });
@@ -44,7 +44,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser(req);
 
   if (!user) {
     return NextResponse.json({ success: false }, { status: 401 });

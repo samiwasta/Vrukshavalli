@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { coupons } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { coupons, orders } from "@/lib/db/schema";
+import { eq, sql, count } from "drizzle-orm";
 import { z } from "zod";
+import { getSession } from "@/lib/session";
 
 const bodySchema = z.object({
   code: z.string().min(4).max(12),
@@ -59,11 +60,34 @@ export async function POST(request: Request) {
       });
     }
 
+    // New-users-only check
+    if (coupon.newUsersOnly) {
+      const session = await getSession(request);
+      if (!session?.user) {
+        return NextResponse.json({
+          success: true,
+          data: { valid: false, reason: "Please log in to use this coupon." },
+        });
+      }
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(orders)
+        .where(eq(orders.userId, session.user.id));
+      if (total > 0) {
+        return NextResponse.json({
+          success: true,
+          data: { valid: false, reason: "This coupon is for new customers only." },
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         valid: true,
-        discountPct: coupon.discountPct,
+        discountType: coupon.discountType as "percentage" | "flat",
+        discountValue: coupon.discountPct,
+        description: coupon.description,
       },
     });
   } catch (error) {

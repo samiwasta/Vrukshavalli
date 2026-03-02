@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { IconHeart, IconShoppingBag, IconUserCircle, IconSparkles } from "@tabler/icons-react";
+import { IconHeart, IconShoppingBag, IconUserCircle, IconSparkles, IconLogout } from "@tabler/icons-react";
 import SearchBar from "@/components/SearchBar";
 import { useWishlist } from "@/context/WishlistContext";
-import { useSession } from "@/lib/auth-client";
+import { useSession, signOut } from "@/lib/auth-client";
 import { useBag } from "@/context/BagContext";
 
 interface NavItem {
@@ -66,7 +67,14 @@ export default function NavbarDesktop() {
   const { items: wishlistItems } = useWishlist();
   const { data: session } = useSession();
   const { openBag } = useBag();
+  const router = useRouter();
   const wishlistCount = wishlistItems.length;
+
+  const handleLogout = async () => {
+    await signOut();
+    setUserPopoverOpen(false);
+    router.push("/");
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -136,6 +144,21 @@ export default function NavbarDesktop() {
                         >
                           My Profile
                         </Link>
+                        <Link
+                          href="/orders"
+                          onClick={() => setUserPopoverOpen(false)}
+                          className="block px-4 py-2.5 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-50"
+                        >
+                          My Orders
+                        </Link>
+                        <div className="mx-3 my-1 border-t border-primary-200" />
+                        <button
+                          onClick={handleLogout}
+                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                        >
+                          <IconLogout size={16} stroke={1.5} />
+                          Logout
+                        </button>
                       </>
                     ) : (
                       <Link
