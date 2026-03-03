@@ -27,6 +27,7 @@ import { cn } from "@/lib/util";
 import { useWishlist } from "@/context/WishlistContext";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
+import { useBag } from "@/context/BagContext";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -39,6 +40,7 @@ interface Product {
   image: string;
   images: string[];
   category: string;
+  categorySlug: string;
   rating: number;
   reviewCount: number;
   stock: number;
@@ -63,37 +65,6 @@ const CATEGORY_IMAGES: Record<string, string> = {
   gifting: "/category-plant.webp",
 };
 
-// function getMockProduct(id: string): Product {
-//   const category = id.split("-")[0] ?? "plants";
-//   const img = CATEGORY_IMAGES[category] ?? "/category-plant.webp";
-//   const price = Math.floor(Math.random() * 500) + 150;
-//   const originalPrice = Math.random() > 0.4 ? Math.floor(price * (1 + Math.random() * 0.6 + 0.2)) : undefined;
-//   return {
-//     id,
-//     name: `${category.charAt(0).toUpperCase() + category.slice(1)} Product ${id.split("-")[1] ?? "1"}`,
-//     slug: id,
-//     description:
-//       "A stunning addition to any indoor space, this plant brings life and colour while naturally purifying the air. Thrives in indirect light and requires minimal maintenance — perfect for both seasoned plant enthusiasts and beginners alike. Its lush, vibrant foliage creates a soothing focal point in living rooms, offices, and balconies.",
-//     price,
-//     originalPrice,
-//     image: img,
-//     images: [img, img, img, img],
-//     category: category.charAt(0).toUpperCase() + category.slice(1),
-//     rating: parseFloat((Math.random() * 1.5 + 3.5).toFixed(1)),
-//     reviewCount: Math.floor(Math.random() * 300) + 20,
-//     stock: Math.floor(Math.random() * 20) + 1,
-//     isNew: Math.random() > 0.6,
-//     isBestSeller: Math.random() > 0.5,
-//     isHandPicked: Math.random() > 0.7,
-//     careLevel: ["Easy", "Moderate", "Expert"][Math.floor(Math.random() * 3)] as Product["careLevel"],
-//     light: "Bright indirect light",
-//     water: "Once a week",
-//     size: "Medium (30–45 cm)",
-//     petFriendly: Math.random() > 0.5,
-//     subCategory: category === "plants" ? "indoor" : undefined,
-//     sizesAvailable: category === "plants" ? ['4"', '6"'] : undefined,
-//   };
-// }
 
 // ── Star Rating ──────────────────────────────────────────────────────────────
 function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
@@ -124,6 +95,7 @@ export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const wishlist = useWishlist();
+  const bag = useBag();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,16 +111,6 @@ export default function ProductDetailPage() {
   }, [id]);
 
   const isFav = product ? wishlist.has(product.id) : false;
-
-  // TODO: Replace with real API fetch: GET /api/products?slug=id or /api/products/[id]
-  // useEffect(() => {
-  //   setLoading(true);
-  //   const timer = setTimeout(() => {
-  //     setProduct(getMockProduct(id));
-  //     setLoading(false);
-  //   }, 500);
-  //   return () => clearTimeout(timer);
-  // }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -166,12 +128,11 @@ export default function ProductDetailPage() {
           setProduct({
             ...p,
             category: p.category?.name ?? "",
-
-            // ✅ convert numeric strings → numbers
+            categorySlug: p.category?.slug ?? "",
             price: Number(p.price),
             originalPrice: p.originalPrice
-              ? Number(p.originalPrice)
-              : undefined,
+            ? Number(p.originalPrice)
+            : undefined,
             rating: Number(p.rating),
           });
         } else {
@@ -189,9 +150,22 @@ export default function ProductDetailPage() {
   }, [id]);
 
   const handleAddToCart = () => {
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
-  };
+  if (!product) return;
+
+  if (product.stock === 0) return;
+
+  bag.addItem({
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    quantity,
+    slug: product.slug,
+  });
+
+  setAddedToCart(true);
+  setTimeout(() => setAddedToCart(false), 2000);
+};
 
   const handleShare = async () => {
     try {
@@ -278,10 +252,9 @@ export default function ProductDetailPage() {
           </Link>
           <span>/</span>
           <Link
-            href={`/product?category=${product.category.toLowerCase()}`}
-            className="hover:text-primary-600 transition-colors"
+             href={`/product?category=${product.categorySlug}`}
           >
-            {product.category}
+             {product.category}
           </Link>
           <span>/</span>
           <span className="text-zinc-700 font-medium line-clamp-1">
@@ -722,7 +695,10 @@ export default function ProductDetailPage() {
         </div>
 
         {/* ── You May Also Like ──────────────────────────────────────────── */}
-        <RelatedProducts category={product.category} currentId={product.id} />
+        <RelatedProducts
+  categorySlug={product.categorySlug}
+  currentId={product.id}
+/>
       </div>
 
       {/* ── Sticky Bottom Bar (mobile) ───────────────────────────────────── */}
@@ -761,27 +737,55 @@ export default function ProductDetailPage() {
 
 // ── Related Products ─────────────────────────────────────────────────────────
 function RelatedProducts({
-  category,
+  categorySlug,
   currentId,
 }: {
-  category: string;
+  categorySlug: string;
   currentId: string;
 }) {
-  const img = CATEGORY_IMAGES[category.toLowerCase()] ?? "/category-plant.webp";
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const related = Array.from({ length: 4 }, (_, i) => ({
-    id: `${category.toLowerCase()}-rel-${i + 1}`,
-    name: `${category} Plant ${i + 1}`,
-    price: Math.floor(Math.random() * 400) + 150,
-    originalPrice:
-      Math.random() > 0.5 ? Math.floor(Math.random() * 300) + 400 : undefined,
-    image: img,
-    rating: parseFloat((Math.random() * 1.5 + 3.5).toFixed(1)),
-    reviewCount: Math.floor(Math.random() * 200) + 10,
-    category,
-    isNew: Math.random() > 0.6,
-    isBestSeller: Math.random() > 0.6,
-  })).filter((p) => p.id !== currentId);
+  useEffect(() => {
+    const fetchRelated = async () => {
+      try {
+        const res = await fetch(
+          `/api/products?category=${categorySlug}&limit=5`
+        );
+        const json = await res.json();
+
+        if (json.success) {
+          const filtered = json.data
+            .filter((p: any) => p.id !== currentId)
+            .slice(0, 4)
+            .map((p: any) => ({
+              id: p.slug,
+              name: p.name,
+              price: Number(p.price),
+              originalPrice: p.originalPrice
+                ? Number(p.originalPrice)
+                : undefined,
+              image: p.image,
+              rating: Number(p.rating),
+              reviewCount: p.reviewCount,
+              category: p.category?.name,
+              isNew: p.isNew,
+              isBestSeller: p.isBestSeller,
+            }));
+
+          setProducts(filtered);
+        }
+      } catch (err) {
+        console.error("Related products error", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (categorySlug) fetchRelated();
+  }, [categorySlug, currentId]);
+
+  if (loading || products.length === 0) return null;
 
   return (
     <section className="mt-16">
@@ -789,26 +793,8 @@ function RelatedProducts({
         You May Also Like
       </h2>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {related.map((p, i) => (
-          <motion.div
-            key={p.id}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08, duration: 0.35 }}
-          >
-            <ProductCard
-              id={p.id}
-              name={p.name}
-              price={p.price}
-              originalPrice={p.originalPrice}
-              image={p.image}
-              rating={p.rating}
-              reviewCount={p.reviewCount}
-              category={p.category}
-              isNew={p.isNew}
-              isBestSeller={p.isBestSeller}
-            />
-          </motion.div>
+        {products.map((p) => (
+          <ProductCard key={p.id} {...p} />
         ))}
       </div>
     </section>

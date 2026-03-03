@@ -43,6 +43,20 @@
       "when": 1772305531972,
       "tag": "0005_dazzling_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772525160118,
+      "tag": "0006_grey_longshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772535883682,
+      "tag": "0007_foamy_hannibal_king",
+      "breakpoints": true
     }
   ]
 }

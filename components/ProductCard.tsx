@@ -6,6 +6,7 @@ import { IconHeart, IconStar, IconStarFilled } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
 import { useWishlist } from "@/context/WishlistContext";
+import { useBag } from "@/context/BagContext";
 import Link from "next/link";
 
 export interface ProductCardProps {
@@ -40,6 +41,7 @@ export default function ProductCard({
 }: ProductCardProps) {
   const wishlist = useWishlist();
   // ensure the ID is a string for the wishlist API
+  const bag = useBag();
   const itemId = String(id);
   const isFavorite = wishlist.has(itemId);
   const [isHovered, setIsHovered] = useState(false);
@@ -61,6 +63,19 @@ export default function ProductCard({
       isHandPicked,
     });
   };
+
+  const handleAddToBag = (e: React.MouseEvent) => {
+  e.stopPropagation();
+  e.preventDefault();
+
+  bag.addItem({
+    id: itemId,
+    name,
+    price,
+    image,
+    quantity: 1,
+  });
+};
 
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
@@ -201,10 +216,11 @@ export default function ProductCard({
 
           <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
-              className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300 border-2 border-primary-600 hover:border-primary-700 text-xs sm:text-sm"
-              size="sm"
+                onClick={handleAddToBag}
+                className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300 border-2 border-primary-600 hover:border-primary-700 text-xs sm:text-sm"
+                size="sm"
             >
-              Add to Bag
+            Add to Bag
             </Button>
           </motion.div>
         </div>

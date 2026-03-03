@@ -1,7 +1,9 @@
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { jsonb } from "drizzle-orm/pg-core";
+import { pgEnum } from "drizzle-orm/pg-core";
 
+export const roleEnum = pgEnum("role", ["customer", "admin"]);
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
 
@@ -11,9 +13,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   phone: text("phone"),
 
-  role: text("role", { enum: ["customer", "admin"] })
-    .default("customer")
-    .notNull(),
+  role: roleEnum("role").default("customer").notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

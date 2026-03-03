@@ -124,12 +124,31 @@ export async function GET(request: Request) {
       .where(whereClause);
 
     // data
-    const data = await db.query.products.findMany({
-      where: whereClause,
-      orderBy,
-      limit,
-      offset,
-    });
+    // If search param exists and limit <= 5 → lightweight search mode
+let data;
+
+if (search && limit <= 5) {
+  data = await db
+    .select({
+      id: products.id,
+      name: products.name,
+      slug: products.slug,
+      image: products.image,
+      price: products.price,
+    })
+    .from(products)
+    .where(whereClause)
+    .orderBy(orderBy)
+    .limit(limit)
+    .offset(offset);
+} else {
+  data = await db.query.products.findMany({
+    where: whereClause,
+    orderBy,
+    limit,
+    offset,
+  });
+}
 
     return NextResponse.json({
       success: true,

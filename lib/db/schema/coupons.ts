@@ -7,6 +7,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { pgEnum } from "drizzle-orm/pg-core";
+
+export const discountTypeEnum = pgEnum("discount_type", [
+  "percentage",
+  "flat",
+]);
 
 export const coupons = pgTable("coupons", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -14,7 +20,9 @@ export const coupons = pgTable("coupons", {
   code: text("code").notNull().unique(),
 
   /** "percentage" → discountPct is a %, "flat" → discountPct is a ₹ amount */
-  discountType: text("discount_type").notNull().default("percentage"),
+  discountType: discountTypeEnum("discount_type")
+  .default("percentage")
+  .notNull(),
 
   discountPct: integer("discount_pct").notNull(),
 
