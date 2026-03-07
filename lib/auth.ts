@@ -10,6 +10,13 @@ export const auth = betterAuth({
       ? `https://${process.env.VERCEL_URL}`
       : "http://localhost:3000"),
 
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://vrukshavalli.vercel.app",
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+  ],
+
   secret: process.env.BETTER_AUTH_SECRET,
 
   database: drizzleAdapter(db, {
