@@ -19,8 +19,9 @@ const addressSchema = z.object({
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getCurrentUser(req);
   if (!user) {
     return NextResponse.json({ success: false }, { status: 401 });
@@ -51,7 +52,7 @@ export async function PATCH(
     .set(data)
     .where(
       and(
-        eq(addresses.id, params.id),
+        eq(addresses.id, id),
         eq(addresses.userId, user.id)
       )
     )
@@ -65,8 +66,9 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const user = await getCurrentUser(req);
   if (!user) {
     return NextResponse.json({ success: false }, { status: 401 });
@@ -76,7 +78,7 @@ export async function DELETE(
     .delete(addresses)
     .where(
       and(
-        eq(addresses.id, params.id),
+        eq(addresses.id, id),
         eq(addresses.userId, user.id)
       )
     );
