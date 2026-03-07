@@ -33,6 +33,15 @@ export const orders = pgTable("orders", {
   .notNull(),
   items: jsonb("items").notNull(), // Array of {productId, name, price, quantity, image}
   notes: text("notes"),
+    cashfreeOrderId: text("cashfree_order_id"),
+
+  paymentSessionId: text("payment_session_id"),
+
+  paymentId: text("payment_id"),
+
+  paymentTime: timestamp("payment_time"),
+
+  gatewayResponse: jsonb("gateway_response"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

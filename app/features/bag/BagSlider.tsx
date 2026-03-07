@@ -178,6 +178,55 @@ export default function BagSlider() {
     }
   }, [items.length]);
 
+  const checkout = async () => {
+  if (!address) {
+    alert("Please add delivery address");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        items,
+        shippingAddress: address,
+        subtotal,
+        tax: taxAmount,
+        shipping: shippingAmount,
+        discount: discountAmount,
+        total: finalTotal,
+        couponCode: appliedCoupon?.code ?? null,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!json.success) {
+      alert("Checkout failed");
+      return;
+    }
+
+    const { paymentSessionId } = json.data;
+
+    const cashfree = new (window as any).Cashfree({
+      mode:
+        process.env.NEXT_PUBLIC_CASHFREE_ENV === "production"
+          ? "production"
+          : "sandbox",
+    });
+
+    cashfree.checkout({
+      paymentSessionId,
+    });
+  } catch (error) {
+    console.error(error);
+    alert("Payment initialization failed");
+  }
+};
+
   return (
     <AnimatePresence>
       {isBagOpen && (
@@ -546,6 +595,7 @@ export default function BagSlider() {
                 Shipping is free on orders above ₹999
               </p>
               <button
+                onClick={checkout}
                 disabled={items.length === 0}
                 className={`w-full rounded-full py-3 text-sm font-semibold transition-colors ${
                   items.length > 0

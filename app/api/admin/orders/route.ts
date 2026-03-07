@@ -1,3 +1,8 @@
+import { requireAdmin } from "@/lib/admin-auth";
+import { db, orders, users } from "@/lib/db";
+import { eq, or, ilike, and, count, desc } from "drizzle-orm";
+import { NextResponse } from "next/server";
+
 export async function GET(request: Request) {
   const { error } = await requireAdmin(request);
   if (error) return error;
@@ -60,11 +65,12 @@ export async function GET(request: Request) {
   const total = totalResult[0]?.total ?? 0;
 
   return NextResponse.json({
-    success: true,
-    data: data.map((o) => ({
-      ...o,
-      totalAmount: Number(o.totalAmount),
-    })),
+  success: true,
+  data: data.map((o: any) => ({
+    ...o,
+    totalAmount: Number(o.totalAmount),
+    createdAt: o.createdAt?.toISOString?.() ?? null,
+  })),
     pagination: {
       page,
       limit,

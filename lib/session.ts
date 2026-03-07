@@ -1,7 +1,9 @@
-import { auth } from "./auth";
+import { auth } from "@/lib/auth";
 
 export async function getSession(request: Request) {
-  return auth.api.getSession({
+  const session = await auth.api.getSession({
     headers: request.headers,
   });
+
+  return session;
 }

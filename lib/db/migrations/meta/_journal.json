@@ -57,6 +57,13 @@
       "when": 1772535883682,
       "tag": "0007_foamy_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772783326126,
+      "tag": "0008_jittery_phalanx",
+      "breakpoints": true
     }
   ]
 }

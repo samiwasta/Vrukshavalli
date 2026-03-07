@@ -22,6 +22,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
+import { useBag } from "@/context/BagContext"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -592,6 +593,11 @@ function ThankYouContent() {
 // ── Page export wrapped in Suspense (required for useSearchParams) ─────────────
 
 export default function ThankYouPage() {
+    const { clearBag } = useBag()
+
+  useEffect(() => {
+    clearBag()
+  }, [])
   return (
     <Suspense
       fallback={
