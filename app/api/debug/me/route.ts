@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/current-user";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function GET() {
-  const user = await getCurrentUser();
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser(req);
   return NextResponse.json(user);
 }

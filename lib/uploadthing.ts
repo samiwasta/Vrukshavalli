@@ -2,7 +2,7 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { user as users } from "@/lib/db/schema/auth";
+import { users } from "@/lib/db/schema/users";
 import { eq } from "drizzle-orm";
 
 const f = createUploadthing();
@@ -17,7 +17,7 @@ export const ourFileRouter = {
     const [dbUser] = await db
       .select({ role: users.role })
       .from(users)
-      .where(eq(users.email, session.user.email))
+      .where(eq(users.authId, session.user.id))
       .limit(1);
 
     if (!dbUser || dbUser.role !== "admin") throw new Error("Forbidden");

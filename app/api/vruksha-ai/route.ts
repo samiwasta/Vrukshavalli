@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-
 const MODEL = "gemini-2.5-flash";
 const MAX_RETRIES = 2;
 
@@ -12,6 +10,12 @@ async function sleep(ms: number) {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
     const formData = await req.formData();
     const file = formData.get("image") as File | null;
 
