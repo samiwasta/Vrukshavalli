@@ -131,6 +131,7 @@ function TestimonialCard({ testimonial }: { testimonial: typeof testimonials[0] 
       <p className="text-sm text-foreground/80 leading-relaxed">
         "{testimonial.text}"
       </p>
+      
     </div>
   );
 }

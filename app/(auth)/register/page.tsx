@@ -2,37 +2,59 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { IconMail, IconLock, IconUser, IconBrandGoogle } from "@tabler/icons-react";
+import { IconMail, IconLock, IconUser, IconPhone, IconBrandGoogle } from "@tabler/icons-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    // Phone validation
+    if (phone && phone.length !== 10) {
+      setPhoneError("Phone number must be exactly 10 digits.");
+      return;
+    }
+    setPhoneError("");
     setLoading(true);
     const { error: err } = await authClient.signUp.email({
       name,
       email,
       password,
-      callbackURL: "/",
+      callbackURL: "/login",
     });
+    if (err) {
+      setLoading(false);
+      toast.error(err.message ?? "Sign up failed");
+      return;
+    }
+    // Session is active after sign-up — persist phone if provided
+    if (phone) {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+    }
     setLoading(false);
-    if (err) setError(err.message ?? "Sign up failed");
+    toast.success("Account created! Please sign in.");
+    router.push("/login");
   };
 
   const handleGoogle = async () => {
-    setError("");
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/",
+      callbackURL: "/post-login",
     });
   };
 
@@ -162,19 +184,49 @@ export default function RegisterPage() {
             />
           </div>
         </motion.div>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-sm font-medium text-red-600"
-          >
-            {error}
-          </motion.p>
-        )}
+        <motion.div
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35, delay: 0.38 }}
+        >
+          <label htmlFor="register-phone" className="mb-1.5 block text-xs font-medium text-primary-700">
+            Phone Number <span className="text-primary-400 font-normal">(optional)</span>
+          </label>
+          <div className="relative">
+            <IconPhone
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400"
+              stroke={1.5}
+            />
+            <input
+              id="register-phone"
+              type="tel"
+              autoComplete="tel"
+              inputMode="numeric"
+              maxLength={10}
+              value={phone}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "");
+                setPhone(val);
+                if (phoneError) setPhoneError("");
+              }}
+              className={`w-full rounded-xl border-2 bg-white py-3 pl-11 pr-4 font-sans text-primary-800 outline-none transition-all placeholder:text-primary-400 focus:ring-2 focus:ring-primary-500/20 ${
+                phoneError
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-primary-200 focus:border-primary-500"
+              }`}
+              placeholder="10-digit mobile number"
+            />
+          </div>
+          {phoneError && (
+            <p className="mt-1.5 text-xs font-medium text-red-600">{phoneError}</p>
+          )}
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.4 }}
+          transition={{ duration: 0.35, delay: 0.42 }}
         >
           <Button
             type="submit"

@@ -1,151 +1,98 @@
 "use client";
 
-import { Button } from "@/components/ui/button"
-import { IconArrowRight } from "@tabler/icons-react"
-import { motion } from "motion/react"
-import ProductCard from "@/components/ProductCard"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { IconArrowRight } from "@tabler/icons-react";
+import { motion } from "motion/react";
+import ProductCard from "@/components/ProductCard";
 
-const handPickedProducts = [
-    {
-        id: 1,
-        name: "Fiddle Leaf Fig - Indoor Air Purifier",
-        price: 1299,
-        originalPrice: 1599,
-        image: "/category-plant.webp",
-        rating: 4.7,
-        reviewCount: 214,
-        category: "Indoor Plants",
-        isBestSeller: true,
-        isHandPicked: true,
-    },
-    {
-        id: 2,
-        name: "Monstera Deliciosa - Swiss Cheese Plant",
-        price: 999,
-        originalPrice: 1299,
-        image: "/category-plant.webp",
-        rating: 4.8,
-        reviewCount: 186,
-        category: "Indoor Plants",
-        isBestSeller: true,
-        isHandPicked: true,
-    },
-    {
-        id: 3,
-        name: "Areca Palm - Natural Air Purifier",
-        price: 899,
-        image: "/category-plant.webp",
-        rating: 4.6,
-        reviewCount: 143,
-        category: "Indoor Plants",
-        isNew: true,
-        isBestSeller: true,
-        isHandPicked: true,
-    },
-    {
-        id: 4,
-        name: "Snake Plant - Low Maintenance Green",
-        price: 699,
-        originalPrice: 899,
-        image: "/category-plant.webp",
-        rating: 4.9,
-        reviewCount: 312,
-        category: "Indoor Plants",
-        isBestSeller: true,
-        isHandPicked: true,
-    },
-    {
-        id: 5,
-        name: "Peace Lily - Elegant Flowering Plant",
-        price: 799,
-        image: "/category-plant.webp",
-        rating: 4.5,
-        reviewCount: 98,
-        category: "Flowering Plants",
-        isBestSeller: true,
-        isHandPicked: true,
-    },
-    {
-        id: 6,
-        name: "Jade Plant - Lucky Succulent",
-        price: 499,
-        originalPrice: 649,
-        image: "/category-plant.webp",
-        rating: 4.7,
-        reviewCount: 167,
-        category: "Succulents",
-        isNew: true,
-        isBestSeller: true,
-        isHandPicked: true,
-    },
-];
-
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  rating?: number;
+  reviewCount?: number;
+  category?: string;
+  isHandPicked?: boolean;
+}
 
 export default function HandPicked() {
-    return (
-        <section className="container mx-auto px-4 w-full bg-background py-10 sm:py-12 lg:py-14">
-            {/* Header with container padding */}
-            <div className="px-4 sm:px-6 mb-8">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl lg:text-3xl xl:text-4xl font-semibold text-primary-600 font-mono leading-tight tracking-tight">Handpicked, Just For You!</h2>
-                    <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                    >
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-full"
-                        >
-                            View All
-                            <motion.span
-                                animate={{ x: [0, 3, 0] }}
-                                transition={{ 
-                                    repeat: Infinity, 
-                                    duration: 1.5,
-                                    ease: "easeInOut"
-                                }}
-                            >
-                                <IconArrowRight size={16} />
-                            </motion.span>
-                        </Button>
-                    </motion.div>
-                </div>
-            </div>
+  const [products, setProducts] = useState<Product[]>([]);
 
-            {/* Scrollable Product Grid - Full width */}
-            <div 
-                className="overflow-x-auto overflow-y-visible pb-4 px-4 sm:px-6 snap-x snap-mandatory scroll-smooth hide-scrollbar"
-                style={{ 
-                    WebkitOverflowScrolling: 'touch',
-                }}
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/products?isHandPicked=true");
+        const json = await res.json();
+
+        if (!json.success) return;
+
+        const mapped = json.data.map((p: any) => ({
+          id: p.slug,
+          name: p.name,
+          price: Number(p.price),
+          originalPrice: p.originalPrice
+            ? Number(p.originalPrice)
+            : undefined,
+          image: p.image,
+          rating: Number(p.rating ?? 0),
+          reviewCount: p.reviewCount ?? 0,
+          category: p.category?.name,
+          isHandPicked: p.isHandPicked,
+        }));
+
+        setProducts(mapped);
+      } catch (err) {
+        console.error("Failed to load handpicked products");
+      }
+    };
+
+    load();
+  }, []);
+
+  return (
+    <section className="container mx-auto px-4 py-10">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl lg:text-3xl xl:text-4xl font-semibold text-primary-600 font-mono">
+          Handpicked, Just For You!
+        </h2>
+
+        <Link href="/product?isHandPicked=true">
+          <Button variant="outline" size="sm" className="rounded-full">
+            View All
+            <motion.span
+              animate={{ x: [0, 3, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
             >
-                <div className="flex gap-4 sm:gap-6">
-                    {handPickedProducts.map((product, index) => (
-                        <motion.div
-                            key={product.id}
-                            className="w-65 sm:w-70 md:w-75 lg:w-80 shrink-0 snap-start"
-                            initial={{ opacity: 0 }}
-                            whileInView={{ opacity: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: index * 0.1, duration: 0.4 }}
-                        >
-                            <ProductCard {...product} />
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
+              <IconArrowRight size={16} />
+            </motion.span>
+          </Button>
+        </Link>
+      </div>
 
-            <style jsx>{`
-                .hide-scrollbar::-webkit-scrollbar {
-                    display: none;
-                }
-                .hide-scrollbar {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
-        </section>
-    )
+      <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4">
+        {products.length === 0 ? (
+          <div className="w-full py-16 flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <span className="text-4xl">🌿</span>
+            <p className="text-base font-medium">No Products Yet</p>
+            <p className="text-sm text-gray-400">Our curators are making their picks!</p>
+          </div>
+        ) : products.map((product, index) => (
+          <motion.div
+            key={product.id}
+            className="w-65 sm:w-70 md:w-75 lg:w-80 shrink-0"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.08 }}
+          >
+            <ProductCard {...product} />
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
 }

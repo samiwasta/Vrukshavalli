@@ -1,55 +1,18 @@
 "use client";
 
-/**
- * useDeliveryAddress
- *
- * Manages the user's delivery address within the bag / checkout flow.
- * All state is client-only right now; integration points are clearly marked
- * for the backend developer.
- *
- * ── BACKEND INTEGRATION GUIDE ───────────────────────────────────────────────
- *
- * The `DeliveryAddress` type is intentionally identical to the `shippingAddress`
- * (jsonb) column in lib/db/schema/orders.ts so it can be passed directly when
- * creating an order via POST /api/orders.
- *
- * 1. FETCH saved address on mount — replace the stub useEffect below with:
- *
- *      useEffect(() => {
- *        if (!session?.user?.id) return;
- *        setIsLoading(true);
- *        fetch("/api/profile")
- *          .then((r) => r.json())
- *          .then((data: { shippingAddress?: DeliveryAddress | null }) => {
- *            setAddress(data.shippingAddress ?? null);
- *          })
- *          .catch(() => setAddress(null))
- *          .finally(() => setIsLoading(false));
- *      }, [session?.user?.id]);
- *
- * 2. PERSIST changes — replace `setAddress(next)` in `updateAddress` with:
- *
- *      await fetch("/api/profile", {
- *        method: "PATCH",
- *        headers: { "Content-Type": "application/json" },
- *        body: JSON.stringify({ shippingAddress: next }),
- *      });
- *      setAddress(next);
- *
- * ────────────────────────────────────────────────────────────────────────────
- */
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 
 export interface DeliveryAddress {
+  id?: string;
   fullName: string;
   phone: string;
   line1: string;
-  line2: string;
+  line2?: string;
   city: string;
   state: string;
   pincode: string;
+  isDefault?: boolean;
 }
 
 export const EMPTY_ADDRESS: DeliveryAddress = {
@@ -63,22 +26,78 @@ export const EMPTY_ADDRESS: DeliveryAddress = {
 };
 
 export function useDeliveryAddress() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
 
-  // TODO: Replace with real fetch when GET /api/profile is available.
-  // See integration guide above.
-  const [address, setAddress] = useState<DeliveryAddress | null>(null);
-  const [isLoading] = useState(false);
+  const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
+  const [selectedAddress, setSelectedAddress] =
+    useState<DeliveryAddress | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // TODO: Replace with PATCH /api/profile when backend is ready.
-  const updateAddress = (next: DeliveryAddress) => {
-    setAddress(next);
+  // ✅ LOAD ADDRESSES
+  useEffect(() => {
+    if (isPending) return;
+
+    if (!session?.user) {
+      setIsLoading(false);
+      return;
+    }
+
+    const load = async () => {
+      try {
+        setIsLoading(true);
+
+        const res = await fetch("/api/addresses");
+
+        if (!res.ok) throw new Error("Failed to load");
+
+        const json = await res.json();
+
+        const list: DeliveryAddress[] = json.data ?? [];
+
+        setAddresses(list);
+
+        const defaultAddress =
+          list.find((a) => a.isDefault) ?? list[0] ?? null;
+
+        setSelectedAddress(defaultAddress);
+      } catch (err) {
+        console.error("LOAD ADDRESS ERROR", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
+  }, [session, isPending]);
+
+  // ✅ ADD ADDRESS
+  const addAddress = async (next: DeliveryAddress) => {
+    try {
+      const res = await fetch("/api/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...next, isDefault: true }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      const json = await res.json();
+
+      const newAddress = json.data;
+
+      setAddresses((prev) => [newAddress, ...prev]);
+      setSelectedAddress(newAddress);
+    } catch (err) {
+      console.error("SAVE ADDRESS ERROR", err);
+    }
   };
 
   return {
-    address,
-    updateAddress,
+    address: selectedAddress,
+    addresses,
+    setSelectedAddress,
+    addAddress,
     isLoading,
-    isLoggedIn: Boolean(session?.user),
+    isLoggedIn: !!session?.user,
   };
 }

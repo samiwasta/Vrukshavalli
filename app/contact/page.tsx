@@ -48,13 +48,13 @@ const SOCIALS = [
   {
     icon: IconBrandInstagram,
     label: "Instagram",
-    href: "https://instagram.com",
+    href: "https://www.instagram.com/vrukshavalli_ratnagiri?igsh=MndvMzQ2eDljNzN4",
     hoverColor: "hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600",
   },
   {
     icon: IconBrandFacebook,
     label: "Facebook",
-    href: "https://facebook.com",
+    href: "https://www.facebook.com/share/16KLu8sr6e/",
     hoverColor: "hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600",
   },
   {
@@ -66,7 +66,7 @@ const SOCIALS = [
   {
     icon: IconBrandYoutube,
     label: "YouTube",
-    href: "https://youtube.com",
+    href: "https://youtube.com/@happy-gardening?si=JHNQL8UG6fSTpv5M",
     hoverColor: "hover:bg-red-50 hover:border-red-200 hover:text-red-600",
   },
 ];
@@ -146,13 +146,28 @@ export default function ContactPage() {
     setForm((prev) => ({ ...prev, [key]: v }));
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    // TODO: Wire up to real API endpoint
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
+  e.preventDefault();
+  setLoading(true);
+
+  const res = await fetch("/api/contact", {
+    method: "POST",
+    body: JSON.stringify({
+      name: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      subject: form.subject,
+      message: form.message,
+    }),
+  });
+
+  const json = await res.json();
+
+  setLoading(false);
+
+  if (json.success) {
     setSubmitted(true);
-  };
+  }
+};
 
   return (
     <div className="min-h-screen bg-background">

@@ -89,13 +89,22 @@ function GiftFormModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    // TODO: Wire up to a real gifting enquiry API endpoint
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsSubmitting(false);
+  e.preventDefault();
+  setIsSubmitting(true);
+
+  const res = await fetch("/api/gifting", {
+    method: "POST",
+    body: JSON.stringify(formData),
+  });
+
+  const json = await res.json();
+
+  setIsSubmitting(false);
+
+  if (json.success) {
     setSubmitted(true);
-  };
+  }
+};
 
   return (
     // Backdrop

@@ -12,7 +12,6 @@ interface Product {
   slug: string;
   price: string;
   image: string;
-  category?: string;
 }
 
 interface SearchBarProps {
@@ -28,9 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
       setDebouncedValue(value);
     }, delay);
 
-    return () => {
-      clearTimeout(handler);
-    };
+    return () => clearTimeout(handler);
   }, [value, delay]);
 
   return debouncedValue;
@@ -44,42 +41,66 @@ export default function SearchBar({
   const [results, setResults] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const debouncedQuery = useDebounce(query, 300);
 
-  // Fetch products based on search query
+  // 🔎 Fetch products (with abort protection)
   const fetchProducts = useCallback(async (searchTerm: string) => {
     if (!searchTerm.trim()) {
       setResults([]);
+      setIsLoading(false);
       return;
     }
 
+    // Cancel previous request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
+
     try {
       const response = await fetch(
-        `/api/products?search=${encodeURIComponent(searchTerm)}&limit=6`
+        `/api/products?search=${encodeURIComponent(searchTerm)}&limit=5`,
+        { signal: controller.signal }
       );
+
+      if (!response.ok) throw new Error("Network error");
+
       const data = await response.json();
 
       if (data.success) {
         setResults(data.data);
+      } else {
+        setResults([]);
       }
-    } catch (error) {
-      console.error("Search error:", error);
-      setResults([]);
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        console.error("Search error:", error);
+        setResults([]);
+      }
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Trigger search when debounced query changes
+  // 🔄 Trigger search on debounce
   useEffect(() => {
-    fetchProducts(debouncedQuery);
+    if (debouncedQuery.trim()) {
+      fetchProducts(debouncedQuery);
+    } else {
+      setResults([]);
+    }
   }, [debouncedQuery, fetchProducts]);
 
-  // Close dropdown when clicking outside
+  // ❌ Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -91,10 +112,11 @@ export default function SearchBar({
     }
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle keyboard navigation
+  // ⌨ Escape closes dropdown
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       setIsOpen(false);
@@ -113,10 +135,14 @@ export default function SearchBar({
     setQuery("");
   };
 
-  const showDropdown = isOpen && (query.trim().length > 0);
+  const showDropdown =
+    isOpen && query.trim().length > 0;
 
   return (
-    <div ref={containerRef} className={cn("relative max-w-md flex-1", className)}>
+    <div
+      ref={containerRef}
+      className={cn("relative max-w-md flex-1", className)}
+    >
       {/* Search Input */}
       <div
         className={cn(
@@ -125,6 +151,7 @@ export default function SearchBar({
         )}
       >
         <IconSearch size={20} className="shrink-0 text-primary-600" />
+
         <input
           ref={inputRef}
           type="text"
@@ -138,8 +165,8 @@ export default function SearchBar({
           placeholder={placeholder}
           className="w-full bg-transparent text-sm placeholder:text-zinc-400 focus:outline-none"
         />
-        
-        {/* Loading / Clear button */}
+
+        {/* Loader / Clear */}
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -148,7 +175,10 @@ export default function SearchBar({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
             >
-              <IconLoader2 size={18} className="animate-spin text-primary-600" />
+              <IconLoader2
+                size={18}
+                className="animate-spin text-primary-600"
+              />
             </motion.div>
           ) : query.length > 0 ? (
             <motion.button
@@ -166,60 +196,60 @@ export default function SearchBar({
         </AnimatePresence>
       </div>
 
-      {/* Search Results Dropdown */}
+      {/* Dropdown */}
       <AnimatePresence>
         {showDropdown && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
             className="absolute left-0 right-0 top-full z-50 overflow-hidden rounded-b-2xl border border-t-0 border-primary-600 bg-white shadow-lg"
           >
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <IconLoader2 size={24} className="animate-spin text-primary-600" />
+                <IconLoader2
+                  size={24}
+                  className="animate-spin text-primary-600"
+                />
               </div>
             ) : results.length > 0 ? (
-              <div className="max-h-100 overflow-y-auto">
-                <div className="p-2">
-                  <p className="px-3 py-2 text-xs font-medium text-zinc-500 uppercase tracking-wide">
-                    Products
-                  </p>
-                  <div className="space-y-1">
-                    {results.map((product) => (
-                      <Link
-                        key={product.id}
-                        href={`/product/${product.slug}`}
-                        onClick={handleResultClick}
-                        className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-primary-50"
-                      >
-                        {/* Product Image */}
-                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-primary-100">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        
-                        {/* Product Info */}
-                        <div className="min-w-0 flex-1">
-                          <h4 className="truncate text-sm font-medium text-zinc-900">
-                            {product.name}
-                          </h4>
-                          <p className="text-sm font-semibold text-primary-600">
-                            ₹{Number(product.price).toLocaleString("en-IN")}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+              <div className="max-h-96 overflow-y-auto p-2">
+                <p className="px-3 py-2 text-xs font-medium text-zinc-500 uppercase tracking-wide">
+                  Products
+                </p>
+
+                <div className="space-y-1">
+                  {results.map((product) => (
+                    <Link
+                      key={product.id}
+                      href={`/product/${product.slug}`}
+                      onClick={handleResultClick}
+                      className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-primary-50"
+                    >
+                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-primary-100">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h4 className="truncate text-sm font-medium text-zinc-900">
+                          {product.name}
+                        </h4>
+                        <p className="text-sm font-semibold text-primary-600">
+                          ₹
+                          {Number(product.price).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-                
-                {/* View All Results Link */}
-                {results.length >= 6 && (
-                  <div className="border-t border-primary-100 p-2">
+
+                {results.length === 5 && (
+                  <div className="border-t border-primary-100 pt-2 mt-2">
                     <Link
                       href={`/product?search=${encodeURIComponent(query)}`}
                       onClick={handleResultClick}
@@ -233,10 +263,9 @@ export default function SearchBar({
               </div>
             ) : (
               <div className="px-4 py-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-                  <IconSearch size={24} className="text-primary-400" />
-                </div>
-                <p className="text-sm font-medium text-zinc-900">No products found</p>
+                <p className="text-sm font-medium text-zinc-900">
+                  No products found
+                </p>
                 <p className="mt-1 text-xs text-zinc-500">
                   Try searching for something else
                 </p>

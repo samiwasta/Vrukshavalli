@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -13,10 +13,10 @@ import {
   IconChevronUp,
   IconArrowRight,
   IconLeaf,
-  IconHash,
   IconCalendar,
   IconShoppingBag,
   IconInbox,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/util";
 import { Button } from "@/components/ui/button";
@@ -44,79 +44,6 @@ interface Order {
   itemCount: number;
   items: OrderItem[];
 }
-
-// ── Demo data ─────────────────────────────────────────────────────────────────
-
-const DEMO_ORDERS: Order[] = [
-  {
-    id: "1",
-    orderNumber: "VK-2025-00341",
-    date: "24 Feb 2025",
-    estimatedDelivery: "28 Feb – 2 Mar 2025",
-    status: "processing",
-    total: 2197,
-    itemCount: 4,
-    items: [
-      { id: "1", name: "Monstera Deliciosa", variant: "Medium • Ceramic Pot", qty: 1, price: 999, image: "/feature-1.jpg" },
-      { id: "2", name: "Peace Lily", variant: "Small • Nursery Pot", qty: 2, price: 499, image: "/feature-2.jpg" },
-      { id: "3", name: "Succulents Trio Set", variant: "", qty: 1, price: 400, image: "/carousel-1.jpg" },
-      { id: "4", name: "Golden Pothos", variant: "Hanging Basket", qty: 1, price: 299, image: "/carousel-2.jpg" },
-    ],
-  },
-  {
-    id: "2",
-    orderNumber: "VK-2025-00298",
-    date: "10 Feb 2025",
-    estimatedDelivery: "14 Feb 2025",
-    status: "delivered",
-    total: 1499,
-    itemCount: 2,
-    items: [
-      { id: "1", name: "Fiddle Leaf Fig", variant: "Large • Terracotta Pot", qty: 1, price: 1199, image: "/carousel-3.jpg" },
-      { id: "2", name: "Pebble Tray", variant: "", qty: 1, price: 300, image: "/feature-1.jpg" },
-    ],
-  },
-  {
-    id: "3",
-    orderNumber: "VK-2025-00271",
-    date: "28 Jan 2025",
-    estimatedDelivery: "2 Feb 2025",
-    status: "shipped",
-    total: 849,
-    itemCount: 3,
-    items: [
-      { id: "1", name: "ZZ Plant", variant: "Small", qty: 1, price: 449, image: "/feature-2.jpg" },
-      { id: "2", name: "Plant Food Sachets", variant: "Pack of 5", qty: 2, price: 200, image: "/carousel-1.jpg" },
-    ],
-  },
-  {
-    id: "4",
-    orderNumber: "VK-2025-00243",
-    date: "15 Jan 2025",
-    estimatedDelivery: "19 Jan 2025",
-    status: "cancelled",
-    total: 599,
-    itemCount: 1,
-    items: [
-      { id: "1", name: "Bird of Paradise", variant: "Medium", qty: 1, price: 599, image: "/carousel-2.jpg" },
-    ],
-  },
-  {
-    id: "5",
-    orderNumber: "VK-2024-00189",
-    date: "5 Dec 2024",
-    estimatedDelivery: "9 Dec 2024",
-    status: "delivered",
-    total: 3249,
-    itemCount: 5,
-    items: [
-      { id: "1", name: "Snake Plant", variant: "Large • White Pot", qty: 1, price: 799, image: "/feature-1.jpg" },
-      { id: "2", name: "Rubber Plant", variant: "Medium", qty: 1, price: 649, image: "/carousel-3.jpg" },
-      { id: "3", name: "Alocasia Polly", variant: "Small", qty: 2, price: 549, image: "/feature-2.jpg" },
-      { id: "4", name: "Liquid Fertiliser", variant: "500ml", qty: 2, price: 349, image: "/carousel-1.jpg" },
-    ],
-  },
-];
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
@@ -245,14 +172,12 @@ function OrderCard({ order, index }: { order: Order; index: number }) {
               ₹{order.total.toLocaleString("en-IN")}
             </p>
           </div>
-          {order.status !== "cancelled" && order.status !== "delivered" && (
-            <Link
-              href={`/orders/${order.id}`}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-sm shadow-primary-600/30 hover:bg-primary-700 transition-colors"
-            >
-              <IconArrowRight size={16} />
-            </Link>
-          )}
+          <Link
+            href={`/orders/${order.id}`}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-sm shadow-primary-600/30 hover:bg-primary-700 transition-colors"
+          >
+            <IconArrowRight size={16} />
+          </Link>
         </div>
       </div>
 
@@ -314,8 +239,8 @@ function OrderCard({ order, index }: { order: Order; index: number }) {
         )}
       </div>
 
-      {/* ── Est. delivery footer (not for cancelled/delivered) ── */}
-      {(order.status === "processing" || order.status === "shipped") && (
+      {/* ── Est. delivery footer ── */}
+      {(order.status === "processing" || order.status === "shipped" || order.status === "pending") && (
         <div
           className={cn(
             "flex items-center gap-2 px-5 py-3 sm:px-6 border-t",
@@ -341,15 +266,42 @@ function OrderCard({ order, index }: { order: Order; index: number }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<"all" | OrderStatus>("all");
+
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        const res = await fetch("/api/orders");
+        if (res.status === 401) {
+          setError("Please log in to view your orders.");
+          return;
+        }
+        if (!res.ok) throw new Error("Failed to load orders");
+        const json = await res.json();
+        if (json.success) {
+          setOrders(json.data);
+        } else {
+          throw new Error("Failed to load orders");
+        }
+      } catch {
+        setError("Something went wrong loading your orders.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchOrders();
+  }, []);
 
   const filtered =
     activeFilter === "all"
-      ? DEMO_ORDERS
-      : DEMO_ORDERS.filter((o) => o.status === activeFilter);
+      ? orders
+      : orders.filter((o) => o.status === activeFilter);
 
-  const counts: Record<string, number> = { all: DEMO_ORDERS.length };
-  DEMO_ORDERS.forEach((o) => {
+  const counts: Record<string, number> = { all: orders.length };
+  orders.forEach((o) => {
     counts[o.status] = (counts[o.status] ?? 0) + 1;
   });
 
@@ -357,7 +309,7 @@ export default function OrdersPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-3xl px-4 py-8 sm:px-6">
 
-        {/* ── Page header ──────────────────────────────────────────────────── */}
+        {/* ── Page header ── */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -370,94 +322,118 @@ export default function OrdersPage() {
             </div>
             <h1 className="font-mono text-2xl font-bold text-zinc-900">My Orders</h1>
           </div>
-          <p className="ml-13 text-sm text-zinc-500 pl-0.5">
-            {DEMO_ORDERS.length} order{DEMO_ORDERS.length !== 1 ? "s" : ""} placed so far
-          </p>
-        </motion.div>
-
-        {/* ── Filter tabs ───────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08 }}
-          className="mb-6 flex gap-2 overflow-x-auto pb-1 scrollbar-none"
-        >
-          {FILTER_TABS.map(({ key, label }) => {
-            const count = counts[key];
-            const isActive = activeFilter === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setActiveFilter(key)}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-all",
-                  isActive
-                    ? "border-primary-500 bg-primary-600 text-white shadow-sm shadow-primary-600/20"
-                    : "border-zinc-200 bg-white text-zinc-600 hover:border-primary-300 hover:text-primary-700"
-                )}
-              >
-                {label}
-                {count !== undefined && (
-                  <span
-                    className={cn(
-                      "flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold",
-                      isActive ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-500"
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </motion.div>
-
-        {/* ── Order list ───────────────────────────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          {filtered.length > 0 ? (
-            <motion.div
-              key={activeFilter}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-4"
-            >
-              {filtered.map((order, i) => (
-                <OrderCard key={order.id} order={order} index={i} />
-              ))}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-zinc-200 bg-white py-20 text-center"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100">
-                <IconInbox size={26} className="text-zinc-300" />
-              </div>
-              <div>
-                <p className="font-mono text-sm font-bold text-zinc-700">No orders here</p>
-                <p className="mt-1 text-xs text-zinc-400">
-                  No {activeFilter === "all" ? "" : activeFilter + " "}orders found.
-                </p>
-              </div>
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="mt-1 rounded-full"
-              >
-                <Link href="/">Start Shopping</Link>
-              </Button>
-            </motion.div>
+          {!loading && !error && (
+            <p className="ml-13 text-sm text-zinc-500 pl-0.5">
+              {orders.length} order{orders.length !== 1 ? "s" : ""} placed so far
+            </p>
           )}
-        </AnimatePresence>
+        </motion.div>
 
-        {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
-        {filtered.length > 0 && (
+        {/* ── Loading state ── */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center gap-4 py-24">
+            <IconLoader2 size={32} className="animate-spin text-primary-400" />
+            <p className="text-sm text-zinc-500">Loading your orders…</p>
+          </div>
+        )}
+
+        {/* ── Error state ── */}
+        {!loading && error && (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-zinc-200 bg-white py-20 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100">
+              <IconCircleX size={26} className="text-red-400" />
+            </div>
+            <div>
+              <p className="font-mono text-sm font-bold text-zinc-700">{error}</p>
+            </div>
+            <Button asChild variant="outline" size="sm" className="mt-1 rounded-full">
+              <Link href="/login">Log In</Link>
+            </Button>
+          </div>
+        )}
+
+        {/* ── Filter tabs ── */}
+        {!loading && !error && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.08 }}
+            className="mb-6 flex gap-2 overflow-x-auto pb-1 scrollbar-none"
+          >
+            {FILTER_TABS.map(({ key, label }) => {
+              const count = counts[key];
+              const isActive = activeFilter === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveFilter(key)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-all",
+                    isActive
+                      ? "border-primary-500 bg-primary-600 text-white shadow-sm shadow-primary-600/20"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:border-primary-300 hover:text-primary-700"
+                  )}
+                >
+                  {label}
+                  {count !== undefined && (
+                    <span
+                      className={cn(
+                        "flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold",
+                        isActive ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-500"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+
+        {/* ── Order list ── */}
+        {!loading && !error && (
+          <AnimatePresence mode="wait">
+            {filtered.length > 0 ? (
+              <motion.div
+                key={activeFilter}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-4"
+              >
+                {filtered.map((order, i) => (
+                  <OrderCard key={order.id} order={order} index={i} />
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-zinc-200 bg-white py-20 text-center"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100">
+                  <IconInbox size={26} className="text-zinc-300" />
+                </div>
+                <div>
+                  <p className="font-mono text-sm font-bold text-zinc-700">No orders here</p>
+                  <p className="mt-1 text-xs text-zinc-400">
+                    No {activeFilter === "all" ? "" : activeFilter + " "}orders found.
+                  </p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="mt-1 rounded-full">
+                  <Link href="/">Start Shopping</Link>
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+
+        {/* ── Bottom CTA ── */}
+        {!loading && !error && filtered.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
