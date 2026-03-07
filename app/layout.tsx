@@ -3,6 +3,7 @@ import { Poppins, Bricolage_Grotesque } from "next/font/google";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { BagProvider } from "@/context/BagContext";
 import BagSlider from "@/app/features/bag/BagSlider";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -38,6 +39,7 @@ export default function RootLayout({
           <BagProvider>
             {children}
             <BagSlider />
+            <WhatsAppButton />
             <Toaster
               richColors
               position="bottom-right"

@@ -70,7 +70,7 @@ export default function Footer() {
             {/* Social Media */}
             <div className="flex gap-2.5">
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/vrukshavalli_ratnagiri?igsh=MndvMzQ2eDljNzN4"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-9 w-9 rounded-full bg-primary-600 hover:bg-primary-700 text-white flex items-center justify-center transition-all hover:scale-105"
@@ -79,7 +79,7 @@ export default function Footer() {
                 <IconBrandInstagram size={18} />
               </a>
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/share/16KLu8sr6e/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-9 w-9 rounded-full bg-primary-600 hover:bg-primary-700 text-white flex items-center justify-center transition-all hover:scale-105"
@@ -88,7 +88,7 @@ export default function Footer() {
                 <IconBrandFacebook size={18} />
               </a>
               <a
-                href="https://youtube.com"
+                href="https://youtube.com/@happy-gardening?si=JHNQL8UG6fSTpv5M"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-9 w-9 rounded-full bg-primary-600 hover:bg-primary-700 text-white flex items-center justify-center transition-all hover:scale-105"

@@ -356,16 +356,18 @@ export default function OrderTrackingPage({
                   {visibleItems.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-primary-100 bg-primary-50/40">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                        />
                         <div className="absolute inset-0 flex items-center justify-center bg-primary-50">
                           <IconLeaf size={15} className="text-primary-200" />
                         </div>
+                        {item.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="absolute inset-0 z-10 h-full w-full object-cover"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-zinc-800">{item.name}</p>
@@ -411,27 +413,33 @@ export default function OrderTrackingPage({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.32, duration: 0.45 }}
               >
-                <Card className="bg-amber-50/30 border-amber-100">
-                  <SectionTitle icon={IconMapPin}>Delivery Address</SectionTitle>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100">
-                      <IconMapPin size={16} className="text-amber-600" />
+                <Card className="p-0 overflow-hidden border-zinc-200">
+                  {/* Header strip */}
+                  <div className="flex items-center gap-2 bg-zinc-50 border-b border-zinc-100 px-5 py-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary-100">
+                      <IconMapPin size={14} className="text-primary-600" />
                     </div>
-                    <div className="text-sm leading-relaxed text-zinc-700">
-                      <p className="font-bold text-zinc-900">{order.shippingAddress.name}</p>
-                      <p>{order.shippingAddress.line1}</p>
-                      {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
-                      <p>
-                        {order.shippingAddress.city}, {order.shippingAddress.state} –{" "}
-                        {order.shippingAddress.pin}
+                    <span className="font-mono text-xs font-bold uppercase tracking-widest text-zinc-600">
+                      Delivery Address
+                    </span>
+                  </div>
+
+                  {/* Body */}
+                  <div className="px-5 py-4">
+                    <p className="text-sm font-bold text-zinc-900">{order.shippingAddress.name}</p>
+                    <p className="mt-1 text-[13px] leading-snug text-zinc-500">
+                      {order.shippingAddress.line1}
+                      {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ""}
+                    </p>
+                    <p className="text-[13px] leading-snug text-zinc-500">
+                      {order.shippingAddress.city}, {order.shippingAddress.state}&nbsp;&ndash;&nbsp;{order.shippingAddress.pin}
+                    </p>
+                    {order.shippingAddress.phone && (
+                      <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary-50 border border-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">
+                        <IconPhone size={11} />
+                        {order.shippingAddress.phone}
                       </p>
-                      {order.shippingAddress.phone && (
-                        <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-amber-100/60 px-2.5 py-1 text-xs font-medium text-amber-700">
-                          <IconPhone size={11} />
-                          {order.shippingAddress.phone}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </Card>
               </motion.div>

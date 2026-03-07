@@ -72,7 +72,10 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
           )
     );
 
-  const clearBag = () => setItems([]);
+  const clearBag = () => {
+    localStorage.removeItem("vrikshavalli_bag");
+    setItems([]);
+  };
 
   return (
     <BagContext.Provider

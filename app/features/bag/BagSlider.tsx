@@ -12,6 +12,10 @@ import {
   IconMapPin,
   IconChevronLeft,
   IconPencil,
+  IconTag,
+  IconCheck,
+  IconCopy,
+  IconTruck,
 } from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,24 +42,55 @@ export default function BagSlider() {
   // ── Delivery address ──────────────────────────────────────────────────────
   const { address, addresses, setSelectedAddress, addAddress } =
     useDeliveryAddress();
-  const [view, setView] = useState<"bag" | "address-list" | "address-edit">(
-    "bag",
-  );
+  const [view, setView] = useState<
+    "bag" | "address-list" | "address-edit" | "coupons"
+  >("bag");
   const [draft, setDraft] = useState<DeliveryAddress>(EMPTY_ADDRESS);
   const [addressErrors, setAddressErrors] = useState<
     Partial<Record<keyof DeliveryAddress, string>>
   >({});
 
-  const openAddressEdit = () => {
-    setDraft(EMPTY_ADDRESS);
-    setAddressErrors({});
-    setView("address-edit");
+  // ── Available coupons ─────────────────────────────────────────────────────
+  const [availableCoupons, setAvailableCoupons] = useState<
+    {
+      code: string;
+      discountType: "percentage" | "flat";
+      discountPct: number;
+      description: string | null;
+      expiresAt: string | null;
+      newUsersOnly: boolean;
+    }[]
+  >([]);
+  const [couponsLoading, setCouponsLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const fetchAvailableCoupons = async () => {
+    if (availableCoupons.length > 0) return; // already loaded
+    try {
+      setCouponsLoading(true);
+      const res = await fetch("/api/coupons");
+      const json = await res.json();
+      if (json.success) setAvailableCoupons(json.data ?? []);
+    } catch {
+      // silently fail
+    } finally {
+      setCouponsLoading(false);
+    }
   };
 
-  const openNewAddress = () => {
-    setDraft(EMPTY_ADDRESS);
-    setAddressErrors({});
-    setView("address-edit");
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code).catch(() => {});
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const handleApplyCouponFromList = (code: string) => {
+    setCouponCode(code);
+    setView("bag");
+    // small delay so the input updates before applying
+    setTimeout(() => {
+      void applyCoupon(code);
+    }, 50);
   };
 
   const saveAddress = () => {
@@ -91,14 +126,14 @@ export default function BagSlider() {
     taxableAmount > 0 ? (taxableAmount >= 999 ? 0 : 79) : 0;
   const finalTotal = taxableAmount + taxAmount + shippingAmount;
 
-  const applyCoupon = async () => {
+  const applyCoupon = async (overrideCode?: string) => {
   if (items.length === 0) {
     setCouponError("Add items to your bag before applying a coupon.");
     setCouponSuccess("");
     return;
   }
 
-  const normalizedCode = couponCode.trim().toUpperCase();
+  const normalizedCode = (overrideCode ?? couponCode).trim().toUpperCase();
 
   if (!normalizedCode) {
     setCouponError("Please enter a coupon code.");
@@ -471,6 +506,24 @@ export default function BagSlider() {
                       {address.pincode}
                     </p>
                     <p className="text-[11px] text-zinc-400">{address.phone}</p>
+                    <div className="mt-1.5 flex items-center gap-1 text-[11px] text-primary-600">
+                      <IconTruck size={12} stroke={1.5} />
+                      <span className="font-semibold">
+                        Est. delivery:&nbsp;
+                        {(() => {
+                          const from = new Date();
+                          from.setDate(from.getDate() + 5);
+                          const to = new Date();
+                          to.setDate(to.getDate() + 7);
+                          const fmt = (d: Date) =>
+                            d.toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                            });
+                          return `${fmt(from)} – ${fmt(to)}`;
+                        })()}
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-[11px] italic text-zinc-400">
@@ -480,12 +533,25 @@ export default function BagSlider() {
               </div>
 
               <div className="mb-3">
-                <label
-                  htmlFor="coupon-code"
-                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500"
-                >
-                  Coupon code
-                </label>
+                <div className="mb-1 flex items-center justify-between">
+                  <label
+                    htmlFor="coupon-code"
+                    className="text-xs font-semibold uppercase tracking-wide text-zinc-500"
+                  >
+                    Coupon code
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void fetchAvailableCoupons();
+                      setView("coupons");
+                    }}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-primary-600 hover:underline"
+                  >
+                    <IconTag size={11} stroke={2} />
+                    View Coupons
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     id="coupon-code"
@@ -652,7 +718,7 @@ export default function BagSlider() {
                         onChange={(e) =>
                           setDraft((d) => ({ ...d, fullName: e.target.value }))
                         }
-                        placeholder="Sami Khan"
+                        placeholder="Jhon Doe"
                         className={`h-10 w-full rounded-xl border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500 ${
                           addressErrors.fullName
                             ? "border-red-400"
@@ -822,9 +888,255 @@ export default function BagSlider() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* ── Address-list overlay ─────────────────────────────────── */}
+            <AnimatePresence>
+              {view === "address-list" && (
+                <motion.div
+                  key="address-list-overlay"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", stiffness: 380, damping: 38 }}
+                  className="absolute inset-0 z-10 flex flex-col bg-white"
+                >
+                  {/* Header */}
+                  <div className="flex shrink-0 items-center gap-3 border-b border-primary-100 px-5 py-4">
+                    <button
+                      type="button"
+                      onClick={() => setView("bag")}
+                      className="flex items-center justify-center rounded-full p-2 text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
+                      aria-label="Back to bag"
+                    >
+                      <IconChevronLeft size={20} stroke={1.5} />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <IconMapPin
+                        size={18}
+                        stroke={1.5}
+                        className="text-primary-600"
+                      />
+                      <span className="font-mono text-base font-bold text-zinc-900">
+                        Select Address
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Address cards */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {addresses.length === 0 ? (
+                      <p className="pt-8 text-center text-sm text-zinc-400 italic">
+                        No saved addresses yet.
+                      </p>
+                    ) : (
+                      addresses.map((addr) => {
+                        const isSelected = address?.id === addr.id;
+                        return (
+                          <button
+                            key={addr.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAddress(addr);
+                              setView("bag");
+                            }}
+                            className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                              isSelected
+                                ? "border-primary-500 bg-primary-50"
+                                : "border-zinc-200 bg-white hover:border-primary-300 hover:bg-primary-50/40"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-zinc-900 leading-snug">
+                                  {addr.fullName}
+                                </p>
+                                <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
+                                  {addr.line1}
+                                  {addr.line2 ? `, ${addr.line2}` : ""},{" "}
+                                  {addr.city}, {addr.state}&nbsp;&ndash;&nbsp;
+                                  {addr.pincode}
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-zinc-400">
+                                  {addr.phone}
+                                </p>
+                              </div>
+                              {isSelected && (
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-600">
+                                  <IconCheck
+                                    size={12}
+                                    stroke={2.5}
+                                    className="text-white"
+                                  />
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Add new address */}
+                  <div className="shrink-0 border-t border-primary-100 p-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraft(EMPTY_ADDRESS);
+                        setAddressErrors({});
+                        setView("address-edit");
+                      }}
+                      className="w-full rounded-full border-2 border-dashed border-primary-300 py-2.5 text-sm font-semibold text-primary-600 transition-colors hover:border-primary-500 hover:bg-primary-50"
+                    >
+                      + Add New Address
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ── Coupons overlay ──────────────────────────────────────── */}
+            <AnimatePresence>
+              {view === "coupons" && (
+                <motion.div
+                  key="coupons-overlay"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", stiffness: 380, damping: 38 }}
+                  className="absolute inset-0 z-10 flex flex-col bg-white"
+                >
+                  {/* Header */}
+                  <div className="flex shrink-0 items-center gap-3 border-b border-primary-100 px-5 py-4">
+                    <button
+                      type="button"
+                      onClick={() => setView("bag")}
+                      className="flex items-center justify-center rounded-full p-2 text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
+                      aria-label="Back to bag"
+                    >
+                      <IconChevronLeft size={20} stroke={1.5} />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <IconTag
+                        size={18}
+                        stroke={1.5}
+                        className="text-primary-600"
+                      />
+                      <span className="font-mono text-base font-bold text-zinc-900">
+                        Available Coupons
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Coupon list */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {couponsLoading ? (
+                      <div className="flex items-center justify-center pt-12">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
+                      </div>
+                    ) : availableCoupons.length === 0 ? (
+                      <p className="pt-8 text-center text-sm text-zinc-400 italic">
+                        No active coupons available right now.
+                      </p>
+                    ) : (
+                      availableCoupons.map((coupon) => {
+                        const discountLabel =
+                          coupon.discountType === "flat"
+                            ? `₹${coupon.discountPct} off`
+                            : `${coupon.discountPct}% off`;
+                        const isAlreadyApplied =
+                          appliedCoupon?.code === coupon.code;
+                        return (
+                          <div
+                            key={coupon.code}
+                            className={`rounded-2xl border p-3 transition-colors ${
+                              isAlreadyApplied
+                                ? "border-emerald-300 bg-emerald-50"
+                                : "border-zinc-200 bg-white"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="rounded-lg bg-primary-100 px-2.5 py-0.5 font-mono text-xs font-bold tracking-wider text-primary-700">
+                                    {coupon.code}
+                                  </span>
+                                  <span className="text-xs font-semibold text-emerald-700">
+                                    {discountLabel}
+                                  </span>
+                                </div>
+                                {coupon.description && (
+                                  <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                                    {coupon.description}
+                                  </p>
+                                )}
+                                {coupon.newUsersOnly && (
+                                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+                                    New customers only
+                                  </p>
+                                )}
+                                {coupon.expiresAt && (
+                                  <p className="mt-0.5 text-[10px] text-zinc-400">
+                                    Expires&nbsp;
+                                    {new Date(
+                                      coupon.expiresAt,
+                                    ).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                                {isAlreadyApplied ? (
+                                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                                    <IconCheck size={12} stroke={2.5} />
+                                    Applied
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleApplyCouponFromList(coupon.code)
+                                    }
+                                    className="rounded-full bg-primary-600 px-3 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-primary-700"
+                                  >
+                                    Apply
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyCode(coupon.code)}
+                                  className="flex items-center gap-1 text-[11px] text-zinc-400 transition-colors hover:text-zinc-700"
+                                  aria-label={`Copy ${coupon.code}`}
+                                >
+                                  {copiedCode === coupon.code ? (
+                                    <>
+                                      <IconCheck size={11} stroke={2} />
+                                      Copied
+                                    </>
+                                  ) : (
+                                    <>
+                                      <IconCopy size={11} stroke={1.5} />
+                                      Copy
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.aside>
         </>
       )}
     </AnimatePresence>
   );
 }
+

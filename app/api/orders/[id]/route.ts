@@ -4,6 +4,33 @@ import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema/orders";
 import { eq, and } from "drizzle-orm";
 
+const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID!;
+const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY!;
+const CASHFREE_BASE =
+  process.env.CASHFREE_ENV === "production"
+    ? "https://api.cashfree.com/pg"
+    : "https://sandbox.cashfree.com/pg";
+
+async function verifyCashfreePayment(orderId: string) {
+  try {
+    const res = await fetch(`${CASHFREE_BASE}/orders/${orderId}/payments`, {
+      headers: {
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY,
+        "x-api-version": "2022-09-01",
+      },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) return null;
+    const payments = await res.json();
+    if (!Array.isArray(payments) || payments.length === 0) return null;
+    // Return the latest payment
+    return payments[payments.length - 1] as { payment_status: string; cf_payment_id: string };
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -15,7 +42,7 @@ export async function GET(
     return NextResponse.json({ success: false }, { status: 401 });
   }
 
-  const [order] = await db
+  let [order] = await db
     .select()
     .from(orders)
     .where(and(eq(orders.id, id), eq(orders.userId, user.id)))
@@ -26,6 +53,26 @@ export async function GET(
       { success: false, error: "Order not found" },
       { status: 404 }
     );
+  }
+
+  // If payment is still pending, check Cashfree in real-time and sync
+  if (order.paymentStatus === "pending") {
+    const payment = await verifyCashfreePayment(id);
+    if (payment?.payment_status === "SUCCESS") {
+      const [updated] = await db
+        .update(orders)
+        .set({ paymentStatus: "paid", status: "processing", paymentId: payment.cf_payment_id })
+        .where(eq(orders.id, id))
+        .returning();
+      if (updated) order = updated;
+    } else if (payment?.payment_status === "FAILED") {
+      const [updated] = await db
+        .update(orders)
+        .set({ paymentStatus: "failed" })
+        .where(eq(orders.id, id))
+        .returning();
+      if (updated) order = updated;
+    }
   }
 
   const items = (order.items as OrderItemRow[]) ?? [];

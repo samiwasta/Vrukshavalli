@@ -19,6 +19,9 @@ import {
   IconClock,
   IconCircleCheck,
   IconCircleDashed,
+  IconCircleX,
+  IconLoader2,
+  IconPhone,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
@@ -35,15 +38,21 @@ interface OrderItem {
   image: string;
 }
 
+interface TrackingEvent {
+  label: string;
+  description: string;
+  timestamp: string;
+  done: boolean;
+  active: boolean;
+}
+
 interface Order {
+  id: string;
   orderNumber: string;
   date: string;
   estimatedDelivery: string;
-  paymentMethod: string;
-  paymentStatus: "paid" | "pending";
-  subtotal: number;
-  shipping: number;
-  discount: number;
+  paymentMethod: string | null;
+  paymentStatus: "paid" | "pending" | "failed" | "refunded";
   total: number;
   shippingAddress: {
     name: string;
@@ -53,68 +62,10 @@ interface Order {
     state: string;
     pin: string;
     phone: string;
-  };
+  } | null;
   items: OrderItem[];
+  timeline: TrackingEvent[];
 }
-
-// ── Demo data (replace with real API fetch once orders API is ready) ──────────
-
-const DEMO_ORDER: Order = {
-  orderNumber: "VK-2025-00341",
-  date: "24 Feb 2025",
-  estimatedDelivery: "28 Feb – 2 Mar 2025",
-  paymentMethod: "UPI / Razorpay",
-  paymentStatus: "paid",
-  subtotal: 2397,
-  shipping: 0,
-  discount: 200,
-  total: 2197,
-  shippingAddress: {
-    name: "Sami Khan",
-    line1: "42, Prestige Falcon City",
-    line2: "Konanakunte Cross, Banashankari",
-    city: "Bengaluru",
-    state: "Karnataka",
-    pin: "560 062",
-    phone: "+91 98765 43210",
-  },
-  items: [
-    {
-      id: "1",
-      name: "Monstera Deliciosa",
-      variant: "Medium • Ceramic Pot",
-      qty: 1,
-      price: 999,
-      image: "/feature-1.jpg",
-    },
-    {
-      id: "2",
-      name: "Peace Lily",
-      variant: "Small • Nursery Pot",
-      qty: 2,
-      price: 499,
-      image: "/feature-2.jpg",
-    },
-    {
-      id: "3",
-      name: "Succulents Trio Set",
-      variant: "",
-      qty: 1,
-      price: 400,
-      image: "/carousel-1.jpg",
-    },
-  ],
-};
-
-// ── Order-tracker steps ───────────────────────────────────────────────────────
-
-const STEPS = [
-  { icon: IconCheck, label: "Order Placed", sub: "Just now" },
-  { icon: IconCreditCard, label: "Payment Confirmed", sub: "Just now" },
-  { icon: IconPackage, label: "Processing", sub: "Within 24 hrs" },
-  { icon: IconTruck, label: "Shipped", sub: "28 Feb est." },
-  { icon: IconMapPin, label: "Delivered", sub: "2 Mar est." },
-];
 
 // ── Small reusable card ───────────────────────────────────────────────────────
 
@@ -160,16 +111,57 @@ function SectionTitle({
 
 function ThankYouContent() {
   const searchParams = useSearchParams();
-  const [order] = useState<Order>(DEMO_ORDER); // TODO: fetch by searchParams.get("orderId")
-  const [confettiDone, setConfettiDone] = useState(false);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Surface the orderId from URL if present (ready for API wiring)
-    // const orderId = searchParams.get("orderId");
-    // if (orderId) fetchOrder(orderId).then(setOrder);
-    const t = setTimeout(() => setConfettiDone(true), 2400);
-    return () => clearTimeout(t);
+    const orderId = searchParams.get("order_id");
+    if (!orderId) {
+      setError("No order ID found in the URL.");
+      setLoading(false);
+      return;
+    }
+
+    fetch(`/api/orders/${orderId}`)
+      .then(async (res) => {
+        if (res.status === 401) throw new Error("Please log in to view this order.");
+        if (res.status === 404) throw new Error("Order not found.");
+        if (!res.ok) throw new Error("Failed to load order details.");
+        const json = await res.json();
+        if (!json.success) throw new Error("Failed to load order details.");
+        setOrder(json.data);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Something went wrong.");
+      })
+      .finally(() => setLoading(false));
   }, [searchParams]);
+
+  // ── Loading ──
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <IconLoader2 size={32} className="animate-spin text-primary-400" />
+        <p className="text-sm text-zinc-500">Loading your order…</p>
+      </div>
+    );
+  }
+
+  // ── Error ──
+  if (error || !order) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100">
+          <IconCircleX size={26} className="text-red-400" />
+        </div>
+        <p className="font-mono text-sm font-bold text-zinc-700">{error ?? "Order not found."}</p>
+        <Button asChild size="sm" className="rounded-full">
+          <Link href="/orders">View My Orders</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const itemCount = order.items.reduce((s, i) => s + i.qty, 0);
 
@@ -249,50 +241,46 @@ function ThankYouContent() {
               {/* connector line (desktop) */}
               <div className="pointer-events-none absolute top-5 left-5 right-5 hidden h-0.5 bg-linear-to-r from-emerald-400 via-emerald-300 to-zinc-200 sm:block" />
 
-              {STEPS.map((step, i) => {
-                const completed = i <= 1; // placed + paid
-                const active = i === 2;   // processing
-                return (
+              {order.timeline.map((step) => (
+                <div
+                  key={step.label}
+                  className="relative z-10 flex sm:flex-col items-center sm:items-center gap-3 sm:gap-2.5 py-1.5 sm:py-0 sm:flex-1"
+                >
                   <div
-                    key={step.label}
-                    className="relative z-10 flex sm:flex-col items-center sm:items-center gap-3 sm:gap-2.5 py-1.5 sm:py-0 sm:flex-1"
+                    className={cn(
+                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 shadow-sm transition-all",
+                      step.done
+                        ? "border-primary-500 bg-primary-500 text-white shadow-primary-500/25"
+                        : step.active
+                        ? "border-primary-400 bg-primary-50 text-primary-600 animate-pulse shadow-primary-400/20"
+                        : "border-zinc-200 bg-white text-zinc-300"
+                    )}
                   >
-                    <div
+                    {step.done ? (
+                      <IconCircleCheck size={19} strokeWidth={2.5} />
+                    ) : step.active ? (
+                      <IconCircleDashed size={19} strokeWidth={2.5} />
+                    ) : (
+                      <IconCircleDashed size={16} className="opacity-30" />
+                    )}
+                  </div>
+                  <div className="sm:text-center">
+                    <p
                       className={cn(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 shadow-sm transition-all",
-                        completed
-                          ? "border-primary-500 bg-primary-500 text-white shadow-primary-500/25"
-                          : active
-                          ? "border-primary-400 bg-primary-50 text-primary-600 animate-pulse shadow-primary-400/20"
-                          : "border-zinc-200 bg-white text-zinc-300"
+                        "text-xs font-semibold",
+                        step.done
+                          ? "text-primary-600"
+                          : step.active
+                          ? "text-primary-700"
+                          : "text-zinc-400"
                       )}
                     >
-                      {completed ? (
-                        <IconCircleCheck size={19} strokeWidth={2.5} />
-                      ) : active ? (
-                        <IconCircleDashed size={19} strokeWidth={2.5} />
-                      ) : (
-                        <step.icon size={16} />
-                      )}
-                    </div>
-                    <div className="sm:text-center">
-                      <p
-                        className={cn(
-                          "text-xs font-semibold",
-                          completed
-                            ? "text-primary-600"
-                            : active
-                            ? "text-primary-700"
-                            : "text-zinc-400"
-                        )}
-                      >
-                        {step.label}
-                      </p>
-                      <p className="text-[10px] text-zinc-400 mt-0.5">{step.sub}</p>
-                    </div>
+                      {step.label}
+                    </p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">{step.timestamp}</p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </Card>
         </motion.div>
@@ -324,18 +312,20 @@ function ThankYouContent() {
                     >
                       {/* Image */}
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-primary-100 bg-primary-50/40">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = "none";
-                          }}
-                        />
                         <div className="absolute inset-0 flex items-center justify-center bg-primary-50">
                           <IconLeaf size={20} className="text-primary-300" />
                         </div>
+                        {item.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="absolute inset-0 z-10 h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        )}
                       </div>
 
                       {/* Details */}
@@ -380,37 +370,45 @@ function ThankYouContent() {
             </motion.div>
 
             {/* Delivery Address */}
+            {order.shippingAddress && (
             <motion.div
               initial={{ opacity: 0, x: -14 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.35, duration: 0.45 }}
             >
-              <Card className="bg-amber-50/30 border-amber-100">
-                <SectionTitle icon={IconMapPin}>Delivery Address</SectionTitle>
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100">
-                    <IconMapPin size={17} className="text-amber-600" />
+              <Card className="p-0 overflow-hidden border-zinc-200">
+                {/* Header strip */}
+                <div className="flex items-center gap-2 bg-zinc-50 border-b border-zinc-100 px-5 py-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary-100">
+                    <IconMapPin size={14} className="text-primary-600" />
                   </div>
-                  <div className="text-sm leading-relaxed text-zinc-700">
-                    <p className="font-bold text-zinc-900 mb-0.5">
+                  <span className="font-mono text-xs font-bold uppercase tracking-widest text-zinc-600">
+                    Delivery Address
+                  </span>
+                </div>
+
+                {/* Body */}
+                <div className="px-5 py-4 flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-zinc-900">
                       {order.shippingAddress.name}
                     </p>
-                    <p>{order.shippingAddress.line1}</p>
-                    {order.shippingAddress.line2 && (
-                      <p>{order.shippingAddress.line2}</p>
-                    )}
-                    <p>
-                      {order.shippingAddress.city},{" "}
-                      {order.shippingAddress.state} –{" "}
-                      {order.shippingAddress.pin}
+                    <p className="mt-1 text-[13px] leading-snug text-zinc-500">
+                      {order.shippingAddress.line1}
+                      {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ""}
                     </p>
-                    <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-amber-100/60 px-2.5 py-1 text-xs font-medium text-amber-700">
+                    <p className="text-[13px] leading-snug text-zinc-500">
+                      {order.shippingAddress.city}, {order.shippingAddress.state}&nbsp;&ndash;&nbsp;{order.shippingAddress.pin}
+                    </p>
+                    <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary-50 border border-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">
+                      <IconPhone size={11} />
                       {order.shippingAddress.phone}
                     </p>
                   </div>
                 </div>
               </Card>
             </motion.div>
+            )}
           </div>
 
           {/* ── Right column ─────────────────────────────────────────────── */}
@@ -456,9 +454,11 @@ function ThankYouContent() {
                       Payment
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-zinc-700">
-                        {order.paymentMethod}
-                      </span>
+                      {order.paymentMethod && (
+                        <span className="font-medium text-zinc-700">
+                          {order.paymentMethod}
+                        </span>
+                      )}
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
@@ -471,29 +471,6 @@ function ThankYouContent() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Divider */}
-                  <div className="my-1 border-t border-dashed border-zinc-200" />
-
-                  {/* Price breakdown */}
-                  <div className="flex justify-between text-zinc-500 text-[13px]">
-                    <span>Subtotal</span>
-                    <span>₹{order.subtotal.toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between text-[13px] text-zinc-500">
-                    <span>Shipping</span>
-                    <span className="font-semibold text-primary-500">
-                      {order.shipping === 0 ? "Free ✦" : `₹${order.shipping}`}
-                    </span>
-                  </div>
-                  {order.discount > 0 && (
-                    <div className="flex justify-between text-[13px] text-zinc-500">
-                      <span>Discount</span>
-                      <span className="font-semibold" style={{ color: "var(--errorDark)" }}>
-                        −₹{order.discount.toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                  )}
 
                   <div className="mt-2 flex items-center justify-between rounded-2xl bg-primary-600 px-4 py-3.5">
                     <span className="font-bold text-primary-100">Total Paid</span>
@@ -551,7 +528,7 @@ function ThankYouContent() {
             size="lg"
             className="w-full rounded-full font-semibold shadow-md shadow-primary-600/20 sm:w-auto"
           >
-            <Link href="/orders" className="flex items-center gap-2">
+            <Link href={`/orders/${order.id}`} className="flex items-center gap-2">
               <IconPackage size={18} />
               Track My Order
               <IconArrowRight size={16} />

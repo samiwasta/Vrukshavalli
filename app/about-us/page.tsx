@@ -463,8 +463,8 @@ export default function AboutUsPage() {
                 {
                   icon: IconBrandInstagram,
                   label: "Follow Us",
-                  value: "@vrikshavalli",
-                  href: "https://instagram.com/vrikshavalli",
+                  value: "@vrukshavalli_ratnagiri",
+                  href: "https://www.instagram.com/vrukshavalli_ratnagiri?igsh=MndvMzQ2eDljNzN4",
                   iconBg: "bg-rose-100",
                   iconColor: "text-rose-500",
                   border: "border-rose-100",
