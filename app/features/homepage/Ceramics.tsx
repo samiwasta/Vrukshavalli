@@ -27,13 +27,14 @@ export default function Ceramics() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/api/products?category=pots-planters");
+        const res = await fetch("/api/products?isCeramicFeatured=true");
         const json = await res.json();
 
         if (!json.success) return;
 
         const mapped = json.data.map((p: any) => ({
-          id: p.slug,
+          id: p.id,
+          slug: p.slug,
           name: p.name,
           price: Number(p.price),
           originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
@@ -41,6 +42,8 @@ export default function Ceramics() {
           rating: Number(p.rating ?? 0),
           reviewCount: p.reviewCount ?? 0,
           category: p.category?.name,
+          stock: Number(p.stock ?? 0),
+          stockCapacity: p.stockCapacity ?? null,
           isBestSeller: p.isBestSeller,
           isNew: p.isNew,
           isHandPicked: p.isHandPicked,

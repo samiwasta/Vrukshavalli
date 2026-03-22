@@ -66,7 +66,8 @@ export default function NavbarDesktop() {
   const userPopoverRef = useRef<HTMLDivElement>(null);
   const { items: wishlistItems } = useWishlist();
   const { data: session } = useSession();
-  const { openBag } = useBag();
+  const { openBag, items: bagItems } = useBag();
+  const bagCount = bagItems.reduce((sum, i) => sum + i.quantity, 0);
   const router = useRouter();
   const wishlistCount = wishlistItems.length;
 
@@ -224,6 +225,14 @@ export default function NavbarDesktop() {
               <span className="relative z-20">
                 <IconShoppingBag size={24} stroke={1.5} />
               </span>
+              {bagCount > 0 && (
+                <span
+                  className="absolute -right-0.5 -top-0.5 z-30 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold leading-none text-white"
+                  aria-label={`${bagCount} items in bag`}
+                >
+                  {bagCount > 9 ? "9+" : bagCount}
+                </span>
+              )}
             </button>
           </motion.div>
         </div>

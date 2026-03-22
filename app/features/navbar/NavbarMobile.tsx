@@ -38,7 +38,8 @@ export default function NavbarMobile() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { items: wishlistItems } = useWishlist();
   const { data: session } = useSession();
-  const { openBag } = useBag();
+  const { openBag, items: bagItems } = useBag();
+  const bagCount = bagItems.reduce((sum, i) => sum + i.quantity, 0);
   const router = useRouter();
   const wishlistCount = wishlistItems.length;
 
@@ -82,10 +83,18 @@ export default function NavbarMobile() {
             <button
               type="button"
               onClick={openBag}
-              className="flex items-center justify-center rounded-full p-2 text-primary-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
+              className="relative flex items-center justify-center rounded-full p-2 text-primary-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
               aria-label="Open bag"
             >
               <IconShoppingBag size={24} stroke={1.5} />
+              {bagCount > 0 && (
+                <span
+                  className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold leading-none text-white"
+                  aria-label={`${bagCount} items in bag`}
+                >
+                  {bagCount > 9 ? "9+" : bagCount}
+                </span>
+              )}
             </button>
           </div>
 

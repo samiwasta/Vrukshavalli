@@ -10,6 +10,7 @@ export interface BagItem {
   quantity: number;
   variant?: string;
   slug?: string;
+  stock?: number;
 }
 
 interface BagContextValue {
@@ -47,9 +48,17 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
       const existing = prev.find((i) => i.id === item.id);
 
       if (existing) {
+        const merged = existing.quantity + item.quantity;
+        const cap =
+          item.stock !== undefined && item.stock > 0 ? item.stock : undefined;
+        const nextQty = cap !== undefined ? Math.min(merged, cap) : merged;
         return prev.map((i) =>
           i.id === item.id
-            ? { ...i, quantity: i.quantity + item.quantity }
+            ? {
+                ...i,
+                quantity: nextQty,
+                stock: item.stock ?? i.stock,
+              }
             : i
         );
       }
@@ -57,7 +66,7 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
       return [...prev, item];
     });
 
-    setIsBagOpen(true); // ✅ auto open bag
+    setIsBagOpen(true);
   };
 
   const removeItem = (id: string) =>

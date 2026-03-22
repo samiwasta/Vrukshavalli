@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
 import { useSession } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 // ── Service definitions ───────────────────────────────────────────────────────
 
@@ -223,6 +224,7 @@ function EnquiryModal({
   });
   const [address, setAddress] = useState("");
   const [message, setMessage] = useState("");
+  const [loggedInPhone, setLoggedInPhone] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
@@ -233,6 +235,18 @@ function EnquiryModal({
       document.body.style.overflow = "";
     };
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    void fetch("/api/profile", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data?.phone && /^\d{10}$/.test(String(d.data.phone))) {
+          setLoggedInPhone(String(d.data.phone));
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   const toggleService = (id: ServiceId) => {
     setSelectedServices((prev) =>
@@ -254,6 +268,9 @@ function EnquiryModal({
         errs.phone = "Enter a valid 10-digit number.";
       if (!guestForm.address.trim()) errs.address = "Address is required.";
     } else {
+      if (!loggedInPhone.trim()) errs.phone = "Phone number is required.";
+      else if (!/^\d{10}$/.test(loggedInPhone.trim()))
+        errs.phone = "Enter a valid 10-digit number.";
       if (!address.trim()) errs.address = "Address is required.";
     }
     setErrors(errs);
@@ -264,10 +281,48 @@ function EnquiryModal({
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
-    // TODO: POST /api/garden-services with { services: selectedServices, ...(guest fields or session user), address, message }
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsSubmitting(false);
-    setSubmitted(true);
+    const fullName = isLoggedIn
+      ? (session?.user?.name?.trim() || "Customer")
+      : guestForm.fullName.trim();
+    const email = isLoggedIn
+      ? (session?.user?.email ?? "")
+      : guestForm.email.trim();
+    const phone = isLoggedIn
+      ? loggedInPhone.trim()
+      : guestForm.phone.trim();
+    const addr = isLoggedIn ? address.trim() : guestForm.address.trim();
+    const msg = isLoggedIn ? message.trim() : guestForm.message.trim();
+
+    try {
+      const res = await fetch("/api/garden-services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          email,
+          phone,
+          address: addr,
+          message: msg || undefined,
+          services: selectedServices,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 429) {
+          toast.error("Too many submissions. Please try again later.");
+        } else if (data?.errors) {
+          toast.error("Please check the form and try again.");
+        } else {
+          toast.error(data?.error ?? "Something went wrong. Please try again.");
+        }
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const displayName = isLoggedIn
@@ -516,19 +571,46 @@ function EnquiryModal({
 
                 {/* ── Logged-in greeting ──────────────────────────── */}
                 {isLoggedIn && (
-                  <div className="flex items-center gap-2.5 rounded-xl bg-primary-50 px-4 py-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-200 text-primary-700 text-sm font-bold">
-                      {session?.user?.name?.charAt(0).toUpperCase() ?? "U"}
+                  <>
+                    <div className="flex items-center gap-2.5 rounded-xl bg-primary-50 px-4 py-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-200 text-primary-700 text-sm font-bold">
+                        {session?.user?.name?.charAt(0).toUpperCase() ?? "U"}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-primary-800">
+                          {session?.user?.name}
+                        </p>
+                        <p className="text-[11px] text-primary-500">
+                          {session?.user?.email}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-primary-800">
-                        {session?.user?.name}
-                      </p>
-                      <p className="text-[11px] text-primary-500">
-                        {session?.user?.email}
-                      </p>
+                    <div className="relative">
+                      <IconPhone
+                        size={16}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
+                      />
+                      <input
+                        type="tel"
+                        required
+                        placeholder="Phone Number (10 digits)"
+                        maxLength={10}
+                        value={loggedInPhone}
+                        onChange={(e) =>
+                          setLoggedInPhone(e.target.value.replace(/\D/g, ""))
+                        }
+                        className={cn(
+                          "h-11 w-full rounded-xl border bg-zinc-50 pl-9 pr-4 text-sm placeholder:text-zinc-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20",
+                          errors.phone ? "border-red-400" : "border-zinc-200",
+                        )}
+                      />
+                      {errors.phone && (
+                        <p className="mt-0.5 text-[11px] text-red-500">
+                          {errors.phone}
+                        </p>
+                      )}
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {/* ── Address (always shown) ───────────────────────── */}

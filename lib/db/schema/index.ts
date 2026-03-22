@@ -8,3 +8,4 @@ export * from "./wishlist";
 export * from "./coupons";
 export * from "./contact-submissions";
 export * from "./gifting-enquiries";
+export * from "./garden-service-enquiries";

@@ -1,7 +1,17 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { db, orders, users } from "@/lib/db";
+import { user as authUserTable } from "@/lib/db/schema/auth";
 import { eq, or, ilike, and, count, desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
+
+function countOrderItems(items: unknown): number {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((acc, row) => {
+    const q = Number((row as { quantity?: unknown }).quantity);
+    if (Number.isFinite(q) && q > 0) return acc + q;
+    return acc + 1;
+  }, 0);
+}
 
 export async function GET(request: Request) {
   const { error } = await requireAdmin(request);
@@ -26,8 +36,10 @@ export async function GET(request: Request) {
     conditions.push(
       or(
         ilike(orders.orderNumber, `%${search}%`),
-        ilike(users.name, `%${search}%`)
-      )
+        ilike(users.name, `%${search}%`),
+        ilike(users.phone, `%${search}%`),
+        ilike(authUserTable.email, `%${search}%`),
+      ),
     );
   }
 
@@ -35,8 +47,11 @@ export async function GET(request: Request) {
     conditions.length > 0 ? and(...conditions) : undefined;
 
   const [totalResult, data] = await Promise.all([
-    db.select({ total: count() }).from(orders)
+    db
+      .select({ total: count() })
+      .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
+      .leftJoin(authUserTable, eq(users.authId, authUserTable.id))
       .where(whereClause),
 
     db
@@ -47,15 +62,18 @@ export async function GET(request: Request) {
         totalAmount: orders.totalAmount,
         paymentStatus: orders.paymentStatus,
         paymentMethod: orders.paymentMethod,
+        billingAddress: orders.billingAddress,
         createdAt: orders.createdAt,
         items: orders.items,
         shippingAddress: orders.shippingAddress,
         userId: orders.userId,
         userName: users.name,
         userPhone: users.phone,
+        userEmail: authUserTable.email,
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
+      .leftJoin(authUserTable, eq(users.authId, authUserTable.id))
       .where(whereClause)
       .orderBy(desc(orders.createdAt))
       .limit(limit)
@@ -66,8 +84,9 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
   success: true,
-  data: data.map((o: any) => ({
+  data: data.map((o) => ({
     ...o,
+    itemCount: countOrderItems(o.items),
     totalAmount: Number(o.totalAmount),
     createdAt: o.createdAt?.toISOString?.() ?? null,
   })),

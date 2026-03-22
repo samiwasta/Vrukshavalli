@@ -8,10 +8,11 @@ import { cn } from "@/lib/util";
 import { useWishlist } from "@/context/WishlistContext";
 import { useBag } from "@/context/BagContext";
 import Link from "next/link";
+import { getStockLevel } from "@/lib/stock";
 
 export interface ProductCardProps {
-  // IDs come from the database (UUID strings), always treated as strings
   id: string;
+  slug?: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -19,6 +20,8 @@ export interface ProductCardProps {
   rating?: number;
   reviewCount?: number;
   category?: string;
+  stock?: number;
+  stockCapacity?: number | null;
   isNew?: boolean;
   isBestSeller?: boolean;
   isHandPicked?: boolean;
@@ -27,6 +30,7 @@ export interface ProductCardProps {
 
 export default function ProductCard({
   id,
+  slug,
   name,
   price,
   originalPrice,
@@ -34,15 +38,18 @@ export default function ProductCard({
   rating = 0,
   reviewCount = 0,
   category,
+  stock = 0,
+  stockCapacity = null,
   isNew,
   isBestSeller,
   isHandPicked,
   className,
 }: ProductCardProps) {
   const wishlist = useWishlist();
-  // ensure the ID is a string for the wishlist API
   const bag = useBag();
   const itemId = String(id);
+  const detailHref = `/product/${slug ?? id}`;
+  const stockLevel = getStockLevel(stock, stockCapacity);
   const isFavorite = wishlist.has(itemId);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -51,6 +58,7 @@ export default function ProductCard({
     e.preventDefault();    // ✅ prevent parent navigation
     wishlist.toggle({
       id: itemId,
+      slug,
       name,
       price,
       originalPrice,
@@ -58,6 +66,8 @@ export default function ProductCard({
       rating,
       reviewCount,
       category,
+      stock,
+      stockCapacity,
       isNew,
       isBestSeller,
       isHandPicked,
@@ -70,10 +80,12 @@ export default function ProductCard({
 
   bag.addItem({
     id: itemId,
+    slug: slug ?? undefined,
     name,
     price,
     image,
     quantity: 1,
+    stock,
   });
 };
 
@@ -106,6 +118,17 @@ export default function ProductCard({
           animate={{ scale: isHovered ? 1.1 : 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         />
+
+        {stockLevel === "out" && (
+          <div className="absolute bottom-3 left-3 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-md">
+            Out of stock
+          </div>
+        )}
+        {stockLevel === "few" && (
+          <div className="absolute bottom-3 left-3 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-md">
+            Few left
+          </div>
+        )}
 
         <motion.div
           className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent"
@@ -203,7 +226,7 @@ export default function ProductCard({
 
         <div className="flex flex-col gap-2 xl:flex-row">
           <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Link href={`/product/${id}`} className="block w-full">
+            <Link href={detailHref} className="block w-full">
               <Button
                 variant="outline"
                 className="w-full rounded-full font-semibold border-2 border-primary-600 text-primary-600 hover:bg-primary-50 text-xs sm:text-sm"

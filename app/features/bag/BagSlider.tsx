@@ -16,18 +16,29 @@ import {
   IconCheck,
   IconCopy,
   IconTruck,
+  IconUserCircle,
 } from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useBag } from "@/context/BagContext";
+import { useSession } from "@/lib/auth-client";
 import {
   useDeliveryAddress,
   type DeliveryAddress,
   EMPTY_ADDRESS,
 } from "./useDeliveryAddress";
+import type { BagStockRow } from "@/lib/validate-order-stock";
+import { getStockLevel } from "@/lib/stock";
 
 export default function BagSlider() {
   const { isBagOpen, closeBag, items, removeItem, updateQty } = useBag();
+  const [stockCheck, setStockCheck] = useState<{
+    loading: boolean;
+    canCheckout: boolean;
+    rows: BagStockRow[];
+  }>({ loading: false, canCheckout: true, rows: [] });
+  const { data: session } = useSession();
+  const isSignedIn = Boolean(session?.user);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<null | {
     code: string;
@@ -213,7 +224,59 @@ export default function BagSlider() {
     }
   }, [items.length]);
 
+  useEffect(() => {
+    if (!isSignedIn && (view === "address-list" || view === "address-edit")) {
+      setView("bag");
+    }
+  }, [isSignedIn, view]);
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setStockCheck({ loading: false, canCheckout: true, rows: [] });
+      return;
+    }
+    let cancelled = false;
+    const ac = new AbortController();
+    setStockCheck((s) => ({ ...s, loading: true }));
+    void (async () => {
+      try {
+        const res = await fetch("/api/products/validate-stock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lines: items.map((i) => ({
+              productId: i.id,
+              quantity: i.quantity,
+            })),
+          }),
+          signal: ac.signal,
+        });
+        const json = await res.json();
+        if (cancelled) return;
+        if (!json.success) {
+          setStockCheck({ loading: false, canCheckout: true, rows: [] });
+          return;
+        }
+        setStockCheck({
+          loading: false,
+          canCheckout: Boolean(json.data?.canCheckout),
+          rows: json.data?.rows ?? [],
+        });
+      } catch {
+        if (cancelled) return;
+        setStockCheck({ loading: false, canCheckout: true, rows: [] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [items]);
+
   const checkout = async () => {
+  if (!isSignedIn) {
+    return;
+  }
   if (!address) {
     alert("Please add delivery address");
     return;
@@ -240,13 +303,23 @@ export default function BagSlider() {
     const json = await res.json();
 
     if (!json.success) {
-      alert("Checkout failed");
+      alert(
+        typeof json.error === "string"
+          ? json.error
+          : "Checkout failed — check stock and try again."
+      );
       return;
     }
 
     const { paymentSessionId } = json.data;
 
-    const cashfree = new (window as any).Cashfree({
+    const CashfreeCtor = window.Cashfree;
+    if (!CashfreeCtor) {
+      alert("Payment could not start. Please refresh the page and try again.");
+      return;
+    }
+
+    const cashfree = new CashfreeCtor({
       mode:
         process.env.NEXT_PUBLIC_CASHFREE_ENV === "production"
           ? "production"
@@ -367,7 +440,9 @@ export default function BagSlider() {
               /* Product list */
               <ul className="flex-1 overflow-y-auto divide-y divide-zinc-100 px-4 py-2">
                 <AnimatePresence initial={false}>
-                  {items.map((item, idx) => (
+                  {items.map((item, idx) => {
+                    const row = stockCheck.rows[idx];
+                    return (
                     <motion.li
                       key={item.id}
                       layout
@@ -383,7 +458,7 @@ export default function BagSlider() {
                     >
                       {/* Thumbnail */}
                       <Link
-                        href={`/product/${item.id}`}
+                        href={`/product/${item.slug ?? item.id}`}
                         onClick={closeBag}
                         className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50"
                       >
@@ -408,6 +483,28 @@ export default function BagSlider() {
                                 {item.variant}
                               </p>
                             )}
+                            {(() => {
+                              if (stockCheck.loading || !row) return null;
+                              if (!row.canCheckout && row.reason) {
+                                return (
+                                  <p className="mt-1 text-[11px] font-medium text-red-600">
+                                    {row.reason}
+                                  </p>
+                                );
+                              }
+                              if (
+                                row.canCheckout &&
+                                getStockLevel(row.stock, row.stockCapacity) ===
+                                  "few"
+                              ) {
+                                return (
+                                  <p className="mt-1 text-[11px] font-medium text-amber-700">
+                                    Few left ({row.stock} available)
+                                  </p>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           {/* Remove */}
                           <button
@@ -443,10 +540,31 @@ export default function BagSlider() {
                             </motion.span>
                             <button
                               type="button"
-                              onClick={() =>
-                                updateQty(item.id, item.quantity + 1)
-                              }
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
+                              onClick={() => {
+                                const cap =
+                                  row && row.stock > 0
+                                    ? row.stock
+                                    : item.stock && item.stock > 0
+                                      ? item.stock
+                                      : undefined;
+                                if (cap !== undefined) {
+                                  updateQty(
+                                    item.id,
+                                    Math.min(item.quantity + 1, cap)
+                                  );
+                                } else {
+                                  updateQty(item.id, item.quantity + 1);
+                                }
+                              }}
+                              disabled={(() => {
+                                if (stockCheck.loading) return false;
+                                if (!row) return false;
+                                if (row.stock > 0) {
+                                  return item.quantity >= row.stock;
+                                }
+                                return true;
+                              })()}
+                              className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600 disabled:pointer-events-none disabled:opacity-35"
                               aria-label="Increase quantity"
                             >
                               <IconPlus size={12} stroke={2} />
@@ -461,76 +579,94 @@ export default function BagSlider() {
                             )}
                           </p>
                         </div>
-                      </div>
+                        </div>
                     </motion.li>
-                  ))}
+                  );
+                  })}
                 </AnimatePresence>
               </ul>
             )}
 
-            {/* ── Footer ───────────────────────────────────────────────── */}
+            {/* ── Footer (hidden for signed-out empty bag) ─────────────── */}
+            {!(!isSignedIn && items.length === 0) && (
             <div className="border-t border-primary-100 p-5">
-              {/* ── Delivery address card ──────────────────────────────── */}
-              <div className="mb-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <IconMapPin
-                      size={13}
-                      stroke={1.5}
-                      className="text-primary-600"
-                    />
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                      Delivering to
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setView("address-list")}
-                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary-600 hover:bg-primary-100"
-                    >
-                      <IconPencil size={11} stroke={2} />
-                      {address ? "Change" : "Add"}
-                    </button>
-                  </div>
-                </div>
-                {address ? (
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-semibold leading-snug text-zinc-800">
-                      {address.fullName}
-                    </p>
-                    <p className="text-[11px] leading-relaxed text-zinc-500">
-                      {address.line1}
-                      {address.line2 ? `, ${address.line2}` : ""},{" "}
-                      {address.city}, {address.state}&nbsp;&ndash;&nbsp;
-                      {address.pincode}
-                    </p>
-                    <p className="text-[11px] text-zinc-400">{address.phone}</p>
-                    <div className="mt-1.5 flex items-center gap-1 text-[11px] text-primary-600">
-                      <IconTruck size={12} stroke={1.5} />
-                      <span className="font-semibold">
-                        Est. delivery:&nbsp;
-                        {(() => {
-                          const from = new Date();
-                          from.setDate(from.getDate() + 5);
-                          const to = new Date();
-                          to.setDate(to.getDate() + 7);
-                          const fmt = (d: Date) =>
-                            d.toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                            });
-                          return `${fmt(from)} – ${fmt(to)}`;
-                        })()}
+              {isSignedIn ? (
+                <div className="mb-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <IconMapPin
+                        size={13}
+                        stroke={1.5}
+                        className="text-primary-600"
+                      />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                        Delivering to
                       </span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setView("address-list")}
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary-600 hover:bg-primary-100"
+                      >
+                        <IconPencil size={11} stroke={2} />
+                        {address ? "Change" : "Add"}
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-[11px] italic text-zinc-400">
-                    No delivery address added yet.
+                  {address ? (
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold leading-snug text-zinc-800">
+                        {address.fullName}
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-zinc-500">
+                        {address.line1}
+                        {address.line2 ? `, ${address.line2}` : ""},{" "}
+                        {address.city}, {address.state}&nbsp;&ndash;&nbsp;
+                        {address.pincode}
+                      </p>
+                      <p className="text-[11px] text-zinc-400">{address.phone}</p>
+                      <div className="mt-1.5 flex items-center gap-1 text-[11px] text-primary-600">
+                        <IconTruck size={12} stroke={1.5} />
+                        <span className="font-semibold">
+                          Est. delivery:&nbsp;
+                          {(() => {
+                            const from = new Date();
+                            from.setDate(from.getDate() + 5);
+                            const to = new Date();
+                            to.setDate(to.getDate() + 7);
+                            const fmt = (d: Date) =>
+                              d.toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                              });
+                            return `${fmt(from)} – ${fmt(to)}`;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] italic text-zinc-400">
+                      No delivery address added yet.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-primary-200/80 bg-primary-50/50 px-3 py-2.5">
+                  <IconUserCircle
+                    size={18}
+                    stroke={1.5}
+                    className="mt-0.5 shrink-0 text-primary-600"
+                  />
+                  <p className="text-[11px] leading-relaxed text-zinc-600">
+                    <span className="font-semibold text-zinc-900">
+                      Sign in to continue.
+                    </span>{" "}
+                    You can review your bag below; log in to add a delivery
+                    address and pay.
                   </p>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="mb-3">
                 <div className="mb-1 flex items-center justify-between">
@@ -598,9 +734,6 @@ export default function BagSlider() {
                         : "text-zinc-400"
                   }`}
                 >
-                  {couponError ||
-                    couponSuccess ||
-                    "Use SAVE10, GREEN5, or PLANT15"}
                 </p>
               </div>
 
@@ -660,18 +793,52 @@ export default function BagSlider() {
               <p className="mb-3 text-[11px] text-zinc-400">
                 Shipping is free on orders above ₹999
               </p>
-              <button
-                onClick={checkout}
-                disabled={items.length === 0}
-                className={`w-full rounded-full py-3 text-sm font-semibold transition-colors ${
-                  items.length > 0
-                    ? "bg-primary-600 text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 active:bg-primary-800"
-                    : "cursor-not-allowed bg-primary-200 text-primary-400"
-                }`}
-              >
-                Proceed to Checkout
-              </button>
+              {items.length > 0 &&
+                !stockCheck.loading &&
+                !stockCheck.canCheckout && (
+                  <p className="mb-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-red-700">
+                    Some items are out of stock or quantities exceed what we have.
+                    Reduce quantities or remove those lines to check out. You can
+                    keep them in your bag until they are back.
+                  </p>
+                )}
+              {isSignedIn ? (
+                <button
+                  type="button"
+                  onClick={checkout}
+                  disabled={
+                    items.length === 0 ||
+                    stockCheck.loading ||
+                    !stockCheck.canCheckout
+                  }
+                  className={`w-full rounded-full py-3 text-sm font-semibold transition-colors ${
+                    items.length > 0 &&
+                    !stockCheck.loading &&
+                    stockCheck.canCheckout
+                      ? "bg-primary-600 text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 active:bg-primary-800"
+                      : "cursor-not-allowed bg-primary-200 text-primary-400"
+                  }`}
+                >
+                  {stockCheck.loading
+                    ? "Checking stock…"
+                    : "Proceed to Checkout"}
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={closeBag}
+                  aria-disabled={items.length === 0}
+                  className={`flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold transition-colors ${
+                    items.length > 0
+                      ? "bg-primary-600 text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 active:bg-primary-800"
+                      : "pointer-events-none cursor-not-allowed bg-primary-200 text-primary-400"
+                  }`}
+                >
+                  Log in to checkout
+                </Link>
+              )}
             </div>
+            )}
 
             {/* ── Address-edit overlay ─────────────────────────────────── */}
             <AnimatePresence>

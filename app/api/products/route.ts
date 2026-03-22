@@ -63,6 +63,7 @@ export async function GET(request: Request) {
     const isNew = searchParams.get("isNew");
     const isBestSeller = searchParams.get("isBestSeller");
     const isHandPicked = searchParams.get("isHandPicked");
+    const isCeramicFeatured = searchParams.get("isCeramicFeatured");
 
     const conditions = [];
 
@@ -102,6 +103,8 @@ export async function GET(request: Request) {
       conditions.push(eq(products.isBestSeller, true));
     if (isHandPicked === "true")
       conditions.push(eq(products.isHandPicked, true));
+    if (isCeramicFeatured === "true")
+      conditions.push(eq(products.isCeramicFeatured, true));
 
     // price range
     if (priceMin) conditions.push(gte(products.price, priceMin));
@@ -135,6 +138,8 @@ if (search && limit <= 5) {
       slug: products.slug,
       image: products.image,
       price: products.price,
+      stock: products.stock,
+      stockCapacity: products.stockCapacity,
     })
     .from(products)
     .where(whereClause)
