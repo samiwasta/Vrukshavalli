@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 /**
  * Protects /admin/* routes.
@@ -7,7 +6,7 @@ import type { NextRequest } from "next/server";
  * since middleware can't easily run Drizzle/DB queries.
  * This middleware just ensures the user has a session cookie before serving any admin page.
  */
-export function middleware(request: NextRequest) {
+export function middleware() {
   // We rely on layout-level auth check for full role validation.
   // This is a lightweight guard to redirect unauthenticated users.
   return NextResponse.next();

@@ -81,8 +81,8 @@ export default function SearchBar({
       } else {
         setResults([]);
       }
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== "AbortError") {
         console.error("Search error:", error);
         setResults([]);
       }

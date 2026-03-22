@@ -203,9 +203,9 @@ export default function OurStoryPage() {
               />
               <p className="text-base sm:text-lg leading-8 text-zinc-700">
                 What started as a shared love for plants during{" "}
-                <span className="font-semibold text-primary-700">Madhuri's</span> B.Tech in
+                <span className="font-semibold text-primary-700">Madhuri&apos;s</span> B.Tech in
                 Agricultural Engineering and{" "}
-                <span className="font-semibold text-primary-700">Pratik's</span> B.Sc in
+                <span className="font-semibold text-primary-700">Pratik&apos;s</span> B.Sc in
                 Horticulture soon turned into a life mission. Leaving behind a well-settled corporate
                 job, Madhuri chose to follow her heart and joined Pratik in the family nursery
                 business at Ratnagiri — combining technical knowledge with hands-on passion.
@@ -223,7 +223,7 @@ export default function OurStoryPage() {
                 across India, Vrukshavalli continues to grow —
               </p>
               <p className="mt-4 font-mono text-xl font-bold text-primary-600">
-                "Adding green touch to your life." 🌿
+                &ldquo;Adding green touch to your life.&rdquo;
               </p>
             </div>
           </FadeUp>
@@ -274,7 +274,7 @@ export default function OurStoryPage() {
                   <p className="text-sm leading-7 text-zinc-600">
                     Out of thousands of start-ups across Maharashtra, Vrukshavalli was recognised as
                     the <span className="font-semibold text-zinc-800">State Level Best Start-Up</span>{" "}
-                    at the prestigious Maharashtra Start Up Yatra — a testament to the impact we've
+                    at the prestigious Maharashtra Start Up Yatra — a testament to the impact we&apos;ve
                     been creating in the agri-green sector.
                   </p>
                   <div className="flex flex-wrap gap-2">

@@ -9,7 +9,6 @@ import {
   IconShoppingCart,
   IconStar,
   IconStarFilled,
-  IconLeaf,
   IconTruckDelivery,
   IconShieldCheck,
   IconRefresh,
@@ -23,6 +22,7 @@ import {
   IconPaw,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import type { ApiProductListRow } from "@/lib/api-product-list-row";
 import { cn } from "@/lib/util";
 import { useWishlist } from "@/context/WishlistContext";
 import Link from "next/link";
@@ -57,16 +57,6 @@ interface Product {
   subCategory?: "indoor" | "outdoor" | "exotic";
   sizesAvailable?: string[];
 }
-
-// ── Mock product generator (replace with real API call) ──────────────────────
-const CATEGORY_IMAGES: Record<string, string> = {
-  plants: "/category-plant.webp",
-  seeds: "/category-seeds.avif",
-  "pots-planters": "/category-ceramics.webp",
-  "plant-care": "/category-care.webp",
-  gifting: "/category-plant.webp",
-};
-
 
 // ── Star Rating ──────────────────────────────────────────────────────────────
 function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
@@ -774,7 +764,23 @@ function RelatedProducts({
   categorySlug: string;
   currentId: string;
 }) {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<
+    {
+      id: string;
+      slug: string;
+      name: string;
+      price: number;
+      originalPrice?: number;
+      image: string;
+      rating: number;
+      reviewCount: number;
+      category?: string;
+      stock: number;
+      stockCapacity: number | null;
+      isNew?: boolean;
+      isBestSeller?: boolean;
+    }[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -786,10 +792,11 @@ function RelatedProducts({
         const json = await res.json();
 
         if (json.success) {
-          const filtered = json.data
-            .filter((p: any) => p.id !== currentId)
+          const rows = json.data as ApiProductListRow[];
+          const filtered = rows
+            .filter((p) => p.id !== currentId)
             .slice(0, 4)
-            .map((p: any) => ({
+            .map((p) => ({
               id: p.id,
               slug: p.slug,
               name: p.name,
@@ -798,8 +805,8 @@ function RelatedProducts({
                 ? Number(p.originalPrice)
                 : undefined,
               image: p.image,
-              rating: Number(p.rating),
-              reviewCount: p.reviewCount,
+              rating: Number(p.rating ?? 0),
+              reviewCount: Number(p.reviewCount ?? 0),
               category: p.category?.name,
               stock: Number(p.stock ?? 0),
               stockCapacity: p.stockCapacity ?? null,

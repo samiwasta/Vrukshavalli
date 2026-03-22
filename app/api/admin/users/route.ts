@@ -136,8 +136,17 @@ export async function GET(request: Request) {
     const displayAddress: DisplayAddressPayload | null = picked
       ? rowToPayload(picked)
       : displayFromProfileJson(u.profileShippingAddress);
-    const { profileShippingAddress: _p, ...rest } = u;
-    return { ...rest, displayAddress };
+    return {
+      id: u.id,
+      authId: u.authId,
+      name: u.name,
+      phone: u.phone,
+      role: u.role,
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt,
+      email: u.email,
+      displayAddress,
+    };
   });
 
   return NextResponse.json({

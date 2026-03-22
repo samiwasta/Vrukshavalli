@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { products } from "@/lib/db/schema/products";
+import type { SQL } from "drizzle-orm";
 import { desc, count, eq, and, ilike, or } from "drizzle-orm";
 import { requireAdmin } from "@/lib/admin-auth";
 import { insertProductSchema } from "@/lib/db/schema/products";
@@ -17,11 +18,15 @@ export async function GET(request: Request) {
   const categoryId = searchParams.get("categoryId");
   const isActiveParam = searchParams.get("isActive");
 
-  const conditions: any[] = [];
+  const conditions: SQL[] = [];
 
   if (search) {
     const term = `%${search}%`;
-    conditions.push(or(ilike(products.name, term), ilike(products.description ?? "", term)));
+    const searchOr = or(
+      ilike(products.name, term),
+      ilike(products.description, term)
+    );
+    if (searchOr) conditions.push(searchOr);
   }
 
   if (categoryId) {

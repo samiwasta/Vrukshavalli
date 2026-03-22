@@ -7,7 +7,6 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation, EffectFade } from 'swiper/modules';
-import type { Swiper as SwiperType } from 'swiper';
 
 import 'swiper/css';
 import 'swiper/css/pagination';
@@ -40,7 +39,6 @@ const CAROUSEL_ITEMS = [
 
 export default function Hero() {
   const [ctaHovered, setCtaHovered] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
 
   return (
     <section className="relative min-h-[calc(100vh-190px)] w-full overflow-hidden bg-zinc-900">
@@ -63,7 +61,6 @@ export default function Hero() {
         }}
         loop={true}
         speed={800}
-        onSlideChange={(swiper: SwiperType) => setActiveIndex(swiper.realIndex)}
         className="h-full w-full min-h-[calc(100vh-190px)]"
       >
         {CAROUSEL_ITEMS.map((item, idx) => (

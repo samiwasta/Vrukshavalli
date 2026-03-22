@@ -2,7 +2,6 @@ import "dotenv/config";
 import { db } from "./index";
 import { categories } from "./schema/categories";
 import { products } from "./schema/products";
-import { eq } from "drizzle-orm";
 
 async function seed() {
   console.log("🌱 Seeding...");

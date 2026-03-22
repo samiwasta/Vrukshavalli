@@ -474,10 +474,10 @@ export default function FAQsPage() {
               </div>
               <div>
                 <h2 className="font-mono text-lg font-bold text-zinc-900">
-                  Can't find your answer?
+                  Can&apos;t find your answer?
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Our team is happy to help — reach out and we'll get back to you quickly.
+                  Our team is happy to help — reach out and we&apos;ll get back to you quickly.
                 </p>
               </div>
             </div>

@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { db, categories } from "@/lib/db";
 import { insertCategorySchema } from "@/lib/db/schema/categories";
 import { getCurrentUser } from "@/lib/current-user";
-import { eq } from "drizzle-orm";
 
 // 🌐 GET all categories (public)
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const data = await db.query.categories.findMany({
       orderBy: (categories, { asc }) => [asc(categories.name)],

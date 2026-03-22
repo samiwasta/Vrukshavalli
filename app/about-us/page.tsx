@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -22,6 +21,18 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
+
+type WhereWeAreCard = {
+  icon: typeof IconMapPin | typeof IconPhone | typeof IconBrandInstagram;
+  label: string;
+  value: string;
+  iconBg: string;
+  iconColor: string;
+  border: string;
+  bg: string;
+  href?: string;
+  mapsHref?: string;
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -218,7 +229,7 @@ export default function AboutUsPage() {
             </h1>
 
             <p className="mt-6 text-base sm:text-lg text-primary-100/85 max-w-2xl mx-auto leading-relaxed">
-              India's first-of-its-kind plant boutique from the Konkan coast — built on decades of
+              India&apos;s first-of-its-kind plant boutique from the Konkan coast — built on decades of
               horticultural expertise, a passion for sustainable living, and an unwavering belief
               that every home deserves a touch of green.
             </p>
@@ -439,42 +450,46 @@ export default function AboutUsPage() {
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
             {/* Info cards */}
             <FadeUp className="flex flex-col gap-4">
-              {[
-                {
-                  icon: IconMapPin,
-                  label: "Visit Us",
-                  value: "Chinmayanand Plaza\nNear Agashe Departmental Stores\nSalvi Stop – Nachane, Link Road\nRatnagiri, Maharashtra 415639",
-                  iconBg: "bg-primary-100",
-                  iconColor: "text-primary-600",
-                  border: "border-primary-100",
-                  bg: "bg-primary-50/40",
-                  mapsHref: "https://maps.app.goo.gl/e4GabUgLdoUhABPz6?g_st=aw",
-                },
-                {
-                  icon: IconPhone,
-                  label: "Call Us",
-                  value: "+91 77198 90777",
-                  href: "tel:+917719890777",
-                  iconBg: "bg-sky-100",
-                  iconColor: "text-sky-600",
-                  border: "border-sky-100",
-                  bg: "bg-sky-50/40",
-                },
-                {
-                  icon: IconBrandInstagram,
-                  label: "Follow Us",
-                  value: "@vrukshavalli_ratnagiri",
-                  href: "https://www.instagram.com/vrukshavalli_ratnagiri?igsh=MndvMzQ2eDljNzN4",
-                  iconBg: "bg-rose-100",
-                  iconColor: "text-rose-500",
-                  border: "border-rose-100",
-                  bg: "bg-rose-50/40",
-                },
-              ].map((item) => (
+              {(
+                [
+                  {
+                    icon: IconMapPin,
+                    label: "Visit Us",
+                    value:
+                      "Chinmayanand Plaza\nNear Agashe Departmental Stores\nSalvi Stop – Nachane, Link Road\nRatnagiri, Maharashtra 415639",
+                    iconBg: "bg-primary-100",
+                    iconColor: "text-primary-600",
+                    border: "border-primary-100",
+                    bg: "bg-primary-50/40",
+                    mapsHref:
+                      "https://maps.app.goo.gl/e4GabUgLdoUhABPz6?g_st=aw",
+                  },
+                  {
+                    icon: IconPhone,
+                    label: "Call Us",
+                    value: "+91 77198 90777",
+                    href: "tel:+917719890777",
+                    iconBg: "bg-sky-100",
+                    iconColor: "text-sky-600",
+                    border: "border-sky-100",
+                    bg: "bg-sky-50/40",
+                  },
+                  {
+                    icon: IconBrandInstagram,
+                    label: "Follow Us",
+                    value: "@vrukshavalli_ratnagiri",
+                    href: "https://www.instagram.com/vrukshavalli_ratnagiri?igsh=MndvMzQ2eDljNzN4",
+                    iconBg: "bg-rose-100",
+                    iconColor: "text-rose-500",
+                    border: "border-rose-100",
+                    bg: "bg-rose-50/40",
+                  },
+                ] satisfies WhereWeAreCard[]
+              ).map((item) => (
                 <a
                   key={item.label}
-                  href={(item as any).href ?? "#"}
-                  target={(item as any).href?.startsWith("http") ? "_blank" : undefined}
+                  href={item.href ?? "#"}
+                  target={item.href?.startsWith("http") ? "_blank" : undefined}
                   rel="noreferrer"
                   className={cn(
                     "flex items-start gap-4 rounded-2xl border p-5 transition-opacity hover:opacity-80",
@@ -497,9 +512,9 @@ export default function AboutUsPage() {
                     <p className="text-sm font-semibold text-zinc-800 whitespace-pre-line">
                       {item.value}
                     </p>
-                    {(item as any).mapsHref && (
+                    {item.mapsHref ? (
                       <a
-                        href={(item as any).mapsHref}
+                        href={item.mapsHref}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -508,7 +523,7 @@ export default function AboutUsPage() {
                         <IconNavigation size={12} />
                         Get Directions
                       </a>
-                    )}
+                    ) : null}
                   </div>
                 </a>
               ))}
@@ -555,7 +570,7 @@ export default function AboutUsPage() {
               Ready to start your green journey?
             </p>
             <p className="mt-3 text-sm text-primary-200 leading-7 max-w-md mx-auto">
-              Explore our collection, book a garden service, or just say hello — we'd love to hear
+              Explore our collection, book a garden service, or just say hello — we&apos;d love to hear
               from you.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">

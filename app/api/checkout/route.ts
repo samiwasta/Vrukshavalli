@@ -20,16 +20,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
 
-  const {
-    items,
-    shippingAddress,
-    subtotal,
-    tax,
-    shipping,
-    discount,
-    total,
-    couponCode,
-  } = body;
+  const { items, shippingAddress, total } = body;
 
   if (!items?.length) {
     return NextResponse.json(

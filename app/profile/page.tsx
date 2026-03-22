@@ -290,8 +290,8 @@ export default function ProfilePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState(emptyAddress());
   const [editAddress, setEditAddress] = useState<AddressFormValues>(emptyAddress());
-  const [pincodeLoading, setPincodeLoading] = useState(false);
-  const [editPincodeLoading, setEditPincodeLoading] = useState(false);
+  const [, setPincodeLoading] = useState(false);
+  const [, setEditPincodeLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [defaultingId, setDefaultingId] = useState<string | null>(null);
   const [savingAddress, setSavingAddress] = useState(false);

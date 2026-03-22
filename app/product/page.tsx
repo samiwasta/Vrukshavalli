@@ -41,9 +41,11 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const params = await searchParams;
   const categoryParam = typeof params.category === "string" ? params.category : null;
   
-  const validCategory = categoryParam && CATEGORIES.includes(categoryParam as any)
-    ? categoryParam
-    : "plants";
+  const validCategory =
+    categoryParam &&
+    (CATEGORIES as readonly string[]).includes(categoryParam)
+      ? (categoryParam as (typeof CATEGORIES)[number])
+      : "plants";
   
   const categoryInfo = CATEGORY_META[validCategory];
   

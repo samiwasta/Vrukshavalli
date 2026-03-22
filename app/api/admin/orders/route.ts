@@ -28,8 +28,21 @@ export async function GET(request: Request) {
 
   const conditions = [];
 
-  if (status && status !== "all") {
-    conditions.push(eq(orders.status, status as any));
+  const orderStatuses = [
+    "pending",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ] as const;
+  if (
+    status &&
+    status !== "all" &&
+    (orderStatuses as readonly string[]).includes(status)
+  ) {
+    conditions.push(
+      eq(orders.status, status as (typeof orderStatuses)[number])
+    );
   }
 
   if (search) {

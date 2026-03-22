@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { IconStar, IconStarFilled } from "@tabler/icons-react";
+import { IconStarFilled } from "@tabler/icons-react";
 
 const testimonials = [
   {
@@ -129,7 +129,7 @@ function TestimonialCard({ testimonial }: { testimonial: typeof testimonials[0] 
       </div>
       
       <p className="text-sm text-foreground/80 leading-relaxed">
-        "{testimonial.text}"
+        &ldquo;{testimonial.text}&rdquo;
       </p>
       
     </div>

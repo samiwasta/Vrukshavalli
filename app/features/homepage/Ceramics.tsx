@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { IconArrowRight } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import ProductCard from "@/components/ProductCard";
+import type { ApiProductListRow } from "@/lib/api-product-list-row";
 
 interface Product {
   id: string;
@@ -32,7 +33,8 @@ export default function Ceramics() {
 
         if (!json.success) return;
 
-        const mapped = json.data.map((p: any) => ({
+        const rows = json.data as ApiProductListRow[];
+        const mapped = rows.map((p) => ({
           id: p.id,
           slug: p.slug,
           name: p.name,
@@ -50,7 +52,7 @@ export default function Ceramics() {
         }));
 
         setProducts(mapped);
-      } catch (err) {
+      } catch {
         console.error("Failed to load ceramic products");
       }
     };

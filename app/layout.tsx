@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Poppins, Bricolage_Grotesque } from "next/font/google";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { BagProvider } from "@/context/BagContext";
@@ -52,7 +53,10 @@ export default function RootLayout({
             />
           </BagProvider>
         </WishlistProvider>
-        <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+        <Script
+          src="https://sdk.cashfree.com/js/v3/cashfree.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
