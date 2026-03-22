@@ -18,8 +18,9 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
     const { error: err } = await authClient.signIn.email({
-      email,
+      email: normalizedEmail,
       password,
       callbackURL: "/post-login",
     });

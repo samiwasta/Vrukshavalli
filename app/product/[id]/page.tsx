@@ -28,6 +28,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import { useBag } from "@/context/BagContext";
+import { getStockLevel } from "@/lib/stock";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -44,6 +45,7 @@ interface Product {
   rating: number;
   reviewCount: number;
   stock: number;
+  stockCapacity?: number | null;
   isNew?: boolean;
   isBestSeller?: boolean;
   isHandPicked?: boolean;
@@ -134,6 +136,8 @@ export default function ProductDetailPage() {
             ? Number(p.originalPrice)
             : undefined,
             rating: Number(p.rating),
+            stock: Number(p.stock ?? 0),
+            stockCapacity: p.stockCapacity ?? null,
           });
         } else {
           setProduct(null);
@@ -149,23 +153,36 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, [id]);
 
+  useEffect(() => {
+    if (!product) return;
+    if (product.stock > 0) {
+      setQuantity((q) =>
+        Math.min(Math.max(1, q), product.stock)
+      );
+    } else {
+      setQuantity(1);
+    }
+  }, [product?.id, product?.stock]);
+
   const handleAddToCart = () => {
-  if (!product) return;
+    if (!product) return;
 
-  if (product.stock === 0) return;
+    const qty =
+      product.stock > 0 ? quantity : Math.min(1, Math.max(1, quantity));
 
-  bag.addItem({
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    image: product.image,
-    quantity,
-    slug: product.slug,
-  });
+    bag.addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: qty,
+      slug: product.slug,
+      stock: product.stock,
+    });
 
-  setAddedToCart(true);
-  setTimeout(() => setAddedToCart(false), 2000);
-};
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
 
   const handleShare = async () => {
     try {
@@ -181,6 +198,7 @@ export default function ProductDetailPage() {
     if (!product) return;
     wishlist.toggle({
       id: product.id,
+      slug: product.slug,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice,
@@ -188,6 +206,8 @@ export default function ProductDetailPage() {
       rating: product.rating,
       reviewCount: product.reviewCount,
       category: product.category,
+      stock: product.stock,
+      stockCapacity: product.stockCapacity ?? null,
       isNew: product.isNew,
       isBestSeller: product.isBestSeller,
       isHandPicked: product.isHandPicked,
@@ -612,12 +632,16 @@ export default function ProductDetailPage() {
             <p
               className={cn(
                 "text-sm font-medium",
-                product.stock <= 5 ? "text-errorDark" : "text-successDark",
+                getStockLevel(product.stock, product.stockCapacity) === "out" && "text-red-600",
+                getStockLevel(product.stock, product.stockCapacity) === "few" && "text-amber-700",
+                getStockLevel(product.stock, product.stockCapacity) === "in" && "text-successDark",
               )}
             >
-              {product.stock <= 5
-                ? `Only ${product.stock} left in stock — order soon`
-                : `In stock (${product.stock} available)`}
+              {getStockLevel(product.stock, product.stockCapacity) === "out" && "Out of stock — you can still add to your bag or wishlist, but checkout is disabled until it is back."}
+              {getStockLevel(product.stock, product.stockCapacity) === "few" &&
+                `Few left — only ${product.stock} available (order soon).`}
+              {getStockLevel(product.stock, product.stockCapacity) === "in" &&
+                `In stock (${product.stock} available)`}
             </p>
 
             {/* Quantity + CTA */}
@@ -625,6 +649,7 @@ export default function ProductDetailPage() {
               {/* Quantity selector */}
               <div className="flex items-center gap-0 rounded-full border-2 border-primary-200 overflow-hidden">
                 <button
+                  type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   className="flex h-11 w-11 items-center justify-center text-primary-600 hover:bg-primary-50 transition-colors"
                 >
@@ -634,10 +659,16 @@ export default function ProductDetailPage() {
                   {quantity}
                 </span>
                 <button
+                  type="button"
+                  disabled={product.stock <= 0}
                   onClick={() =>
-                    setQuantity((q) => Math.min(product.stock, q + 1))
+                    setQuantity((q) =>
+                      product.stock > 0
+                        ? Math.min(product.stock, q + 1)
+                        : q
+                    )
                   }
-                  className="flex h-11 w-11 items-center justify-center text-primary-600 hover:bg-primary-50 transition-colors"
+                  className="flex h-11 w-11 items-center justify-center text-primary-600 hover:bg-primary-50 transition-colors disabled:pointer-events-none disabled:opacity-30"
                 >
                   <IconPlus size={16} />
                 </button>
@@ -759,7 +790,8 @@ function RelatedProducts({
             .filter((p: any) => p.id !== currentId)
             .slice(0, 4)
             .map((p: any) => ({
-              id: p.slug,
+              id: p.id,
+              slug: p.slug,
               name: p.name,
               price: Number(p.price),
               originalPrice: p.originalPrice
@@ -769,6 +801,8 @@ function RelatedProducts({
               rating: Number(p.rating),
               reviewCount: p.reviewCount,
               category: p.category?.name,
+              stock: Number(p.stock ?? 0),
+              stockCapacity: p.stockCapacity ?? null,
               isNew: p.isNew,
               isBestSeller: p.isBestSeller,
             }));
@@ -794,7 +828,7 @@ function RelatedProducts({
       </h2>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {products.map((p) => (
-          <ProductCard key={p.id} {...p} />
+          <ProductCard key={p.id} {...p} slug={p.slug} />
         ))}
       </div>
     </section>

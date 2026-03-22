@@ -55,7 +55,7 @@ export async function GET(
     );
   }
 
-  // If payment is still pending, check Cashfree in real-time and sync
+  // Fallback if Cashfree webhook is delayed: payment status is normally set by POST /api/payments/webhook
   if (order.paymentStatus === "pending") {
     const payment = await verifyCashfreePayment(id);
     if (payment?.payment_status === "SUCCESS") {

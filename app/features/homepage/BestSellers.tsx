@@ -30,7 +30,8 @@ export default function BestSellers() {
       if (!json.success) return;
 
       const mapped = json.data.map((p: any) => ({
-        id: p.slug, // for routing
+        id: p.id,
+        slug: p.slug,
         name: p.name,
         price: Number(p.price),
         originalPrice: p.originalPrice
@@ -40,6 +41,8 @@ export default function BestSellers() {
         rating: Number(p.rating ?? 0),
         reviewCount: p.reviewCount ?? 0,
         category: p.category?.name,
+        stock: Number(p.stock ?? 0),
+        stockCapacity: p.stockCapacity ?? null,
         isBestSeller: p.isBestSeller,
         isNew: p.isNew,
       }));

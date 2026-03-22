@@ -27,15 +27,21 @@ export default function RegisterPage() {
     }
     setPhoneError("");
     setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
     const { error: err } = await authClient.signUp.email({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password,
       callbackURL: "/login",
     });
     if (err) {
       setLoading(false);
-      toast.error(err.message ?? "Sign up failed");
+      const msg = err.message ?? "Sign up failed";
+      toast.error(
+        /already exists|duplicate|unique|email/i.test(msg)
+          ? "An account with this email already exists. Sign in instead."
+          : msg,
+      );
       return;
     }
     // Session is active after sign-up — persist phone if provided

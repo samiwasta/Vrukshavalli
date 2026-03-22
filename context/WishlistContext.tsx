@@ -5,6 +5,8 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -12,6 +14,7 @@ import { useSession } from "@/lib/auth-client";
 
 export interface WishlistItem {
   id: string;
+  slug?: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -19,12 +22,38 @@ export interface WishlistItem {
   rating?: number;
   reviewCount?: number;
   category?: string;
+  stock?: number;
+  stockCapacity?: number | null;
   isNew?: boolean;
   isBestSeller?: boolean;
   isHandPicked?: boolean;
 }
 
 const STORAGE_KEY = "vrikshavalli-wishlist";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isProductUuid(id: string): boolean {
+  return UUID_RE.test(String(id).trim());
+}
+
+function mergeWishlistFetch(
+  server: WishlistItem[],
+  prev: WishlistItem[],
+): WishlistItem[] {
+  const map = new Map<string, WishlistItem>();
+  for (const s of server) {
+    map.set(String(s.id), s);
+  }
+  for (const p of prev) {
+    const pid = String(p.id);
+    if (!map.has(pid)) {
+      map.set(pid, p);
+    }
+  }
+  return Array.from(map.values());
+}
 
 interface WishlistContextValue {
   items: WishlistItem[];
@@ -35,104 +64,192 @@ interface WishlistContextValue {
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 
 function loadStored(): WishlistItem[] {
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as WishlistItem[]) : [];
   } catch {
     return [];
   }
 }
 
 function saveStored(items: WishlistItem[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    //
+  }
+}
+
+async function fetchWishlist(): Promise<WishlistItem[]> {
+  const res = await fetch("/api/wishlist", {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  const json = (await res.json()) as { data?: WishlistItem[] };
+  return Array.isArray(json.data) ? json.data : [];
 }
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const { data: session, isPending } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult.data;
+  const isPending = sessionResult.isPending ?? false;
 
   const [items, setItems] = useState<WishlistItem[]>([]);
-  const [ready, setReady] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const lastLoggedInUserIdRef = useRef<string | undefined>(undefined);
+  const syncGenerationRef = useRef(0);
 
-  const isLoggedIn = !!session?.user;
-
-  // ================= INITIAL LOAD =================
-
-  useEffect(() => {
-    if (isPending) return;
-
-    const load = async () => {
-      // LOGGED IN → always trust DB
-      if (session?.user) {
-        const res = await fetch("/api/wishlist", {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        if (res.ok) {
-          const json = await res.json();
-          setItems(json.data || []);
-        }
-
-        setReady(true);
-        return;
-      }
-
-      // GUEST
-      if (session === null) {
-        setItems(loadStored());
-        setReady(true);
-      }
-    };
-
-    load();
-  }, [session, isPending]);
-
-  // ================= PERSIST GUEST =================
+  useLayoutEffect(() => {
+    setItems(loadStored());
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
-    if (!ready || isLoggedIn) return;
-    saveStored(items);
-  }, [items, ready, isLoggedIn]);
+    if (!hydrated || isPending) return;
 
-  // ================= HELPERS =================
+    let cancelled = false;
+    const uid = session?.user?.id;
+    const syncGen = ++syncGenerationRef.current;
 
-  const has = useCallback(
-    (id: string) => items.some((i) => i.id === id),
-    [items]
-  );
+    async function syncLoggedIn() {
+      const guestSnapshot = loadStored();
+      let serverItems = await fetchWishlist();
+      if (cancelled || syncGen !== syncGenerationRef.current) return;
 
-  // ================= TOGGLE =================
+      const serverIds = new Set(serverItems.map((i) => String(i.id)));
 
-  const toggle = useCallback(
-    async (item: WishlistItem) => {
-      const exists = items.some((i) => i.id === item.id);
-
-      // ⭐ optimistic UI
-      if (exists) {
-        setItems((prev) => prev.filter((i) => i.id !== item.id));
-      } else {
-        setItems((prev) => [...prev, item]);
-      }
-
-      // 👤 guest → done
-      if (!isLoggedIn) return;
-
-      // 🔐 logged in → sync server
-      if (exists) {
-        await fetch(`/api/wishlist/${item.id}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-      } else {
-        await fetch("/api/wishlist", {
+      for (const g of guestSnapshot) {
+        if (!isProductUuid(String(g.id))) continue;
+        if (serverIds.has(String(g.id))) continue;
+        const post = await fetch("/api/wishlist", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: item.id }),
+          body: JSON.stringify({ productId: g.id }),
+        });
+        if (post.ok || post.status === 201) {
+          serverIds.add(String(g.id));
+        }
+        if (cancelled || syncGen !== syncGenerationRef.current) return;
+      }
+
+      if (cancelled || syncGen !== syncGenerationRef.current) return;
+      serverItems = await fetchWishlist();
+      if (cancelled || syncGen !== syncGenerationRef.current) return;
+
+      const nonUuidGuest = guestSnapshot.filter(
+        (g) => !isProductUuid(String(g.id)),
+      );
+      const mergedMap = new Map<string, WishlistItem>();
+      for (const s of serverItems) {
+        mergedMap.set(String(s.id), s);
+      }
+      for (const g of nonUuidGuest) {
+        if (!mergedMap.has(String(g.id))) {
+          mergedMap.set(String(g.id), g);
+        }
+      }
+      const merged = Array.from(mergedMap.values());
+      if (cancelled || syncGen !== syncGenerationRef.current) return;
+      setItems(merged);
+      saveStored(merged);
+    }
+
+    if (uid) {
+      lastLoggedInUserIdRef.current = uid;
+      void syncLoggedIn();
+    } else {
+      if (lastLoggedInUserIdRef.current) {
+        lastLoggedInUserIdRef.current = undefined;
+        setItems(loadStored());
+      }
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, isPending, session?.user?.id]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveStored(items);
+  }, [hydrated, items]);
+
+  const has = useCallback(
+    (id: string) => items.some((i) => String(i.id) === String(id)),
+    [items],
+  );
+
+  const toggle = useCallback(
+    async (item: WishlistItem) => {
+      const id = String(item.id);
+
+      if (!session?.user) {
+        setItems((prev) => {
+          const existed = prev.some((i) => String(i.id) === id);
+          return existed
+            ? prev.filter((i) => String(i.id) !== id)
+            : [...prev, { ...item, id }];
+        });
+        return;
+      }
+
+      let existed = false;
+      setItems((prev) => {
+        existed = prev.some((i) => String(i.id) === id);
+        return existed
+          ? prev.filter((i) => String(i.id) !== id)
+          : [...prev, { ...item, id }];
+      });
+
+      if (!isProductUuid(id)) {
+        return;
+      }
+
+      try {
+        if (existed) {
+          const res = await fetch(`/api/wishlist/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            credentials: "include",
+          });
+          if (!res.ok && res.status !== 204) {
+            throw new Error("remove failed");
+          }
+        } else {
+          const res = await fetch("/api/wishlist", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ productId: id }),
+          });
+          if (res.status === 404 || res.status === 400) {
+            syncGenerationRef.current += 1;
+            return;
+          }
+          if (!res.ok && res.status !== 201) {
+            throw new Error("add failed");
+          }
+        }
+
+        syncGenerationRef.current += 1;
+        const fresh = await fetchWishlist();
+        setItems((prev) => mergeWishlistFetch(fresh, prev));
+      } catch {
+        setItems((prev) => {
+          if (existed) {
+            const already = prev.some((i) => String(i.id) === id);
+            return already ? prev : [...prev, { ...item, id }];
+          }
+          return prev.filter((i) => String(i.id) !== id);
         });
       }
     },
-    [items, isLoggedIn]
+    [session?.user],
   );
 
   return (

@@ -11,6 +11,7 @@ import {
   IconMessage,
   IconGift,
   IconLeaf,
+  IconSpray,
   IconLogout,
 } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { href: "/admin/coupons", label: "Coupons", icon: IconTag },
   { href: "/admin/contact", label: "Contact", icon: IconMessage },
   { href: "/admin/gifting", label: "Gifting", icon: IconGift },
+  { href: "/admin/garden-services", label: "Garden Services", icon: IconSpray },
 ];
 
 export function AdminSidebar({ userName }: { userName: string }) {

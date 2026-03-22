@@ -36,6 +36,7 @@ export async function GET(request:Request) {
 
       return {
         id: p.id,
+        slug: p.slug,
         name: p.name,
         price: Number(p.price),
         originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
@@ -43,6 +44,8 @@ export async function GET(request:Request) {
         rating: p.rating ? Number(p.rating) : undefined,
         reviewCount: p.reviewCount ?? 0,
         category: p.category?.name,
+        stock: p.stock ?? 0,
+        stockCapacity: p.stockCapacity ?? null,
         isNew: p.isNew,
         isBestSeller: p.isBestSeller,
         isHandPicked: p.isHandPicked,

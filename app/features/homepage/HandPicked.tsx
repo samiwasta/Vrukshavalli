@@ -31,7 +31,8 @@ export default function HandPicked() {
         if (!json.success) return;
 
         const mapped = json.data.map((p: any) => ({
-          id: p.slug,
+          id: p.id,
+          slug: p.slug,
           name: p.name,
           price: Number(p.price),
           originalPrice: p.originalPrice
@@ -41,6 +42,8 @@ export default function HandPicked() {
           rating: Number(p.rating ?? 0),
           reviewCount: p.reviewCount ?? 0,
           category: p.category?.name,
+          stock: Number(p.stock ?? 0),
+          stockCapacity: p.stockCapacity ?? null,
           isHandPicked: p.isHandPicked,
         }));
 

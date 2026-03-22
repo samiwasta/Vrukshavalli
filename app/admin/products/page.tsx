@@ -20,6 +20,8 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useUploadThing } from "@/lib/uploadthing-react";
+import { Switch } from "@/components/ui/switch";
+import { adminStockDisplay } from "@/lib/stock";
 
 interface Category { id: string; name: string; slug: string; }
 interface Product {
@@ -29,16 +31,45 @@ interface Product {
   price: string;
   originalPrice: string | null;
   stock: number;
+  stockCapacity: number | null;
   isActive: boolean;
   isNew: boolean;
   isBestSeller: boolean;
   isHandPicked: boolean;
+  isCeramicFeatured: boolean;
   description: string | null;
   image: string;
   images: string[] | null;
   categoryId: string | null;
   category: Category | null;
 }
+
+type ProductFormFlags = {
+  isActive: boolean;
+  isNew: boolean;
+  isBestSeller: boolean;
+  isHandPicked: boolean;
+  isCeramicFeatured: boolean;
+};
+
+function parseStockCapacity(raw: string): number | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.floor(n);
+}
+
+const HOMEPAGE_SECTION_OPTIONS: {
+  key: keyof Pick<ProductFormFlags, "isNew" | "isBestSeller" | "isHandPicked" | "isCeramicFeatured">;
+  label: string;
+  desc: string;
+}[] = [
+  { key: "isBestSeller", label: "Flying Off the Shelves", desc: "Homepage row" },
+  { key: "isHandPicked", label: "Handpicked, Just For You!", desc: "Homepage row" },
+  { key: "isNew", label: "Fresh to the Garden", desc: "Homepage row" },
+  { key: "isCeramicFeatured", label: "Handcrafted Ceramic Planters", desc: "Homepage row" },
+];
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,9 +83,11 @@ export default function AdminProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [editForm, setEditForm] = useState<{
     name: string; description: string; price: string; originalPrice: string;
-    categoryId: string; stock: number;
-    isActive: boolean; isNew: boolean; isBestSeller: boolean; isHandPicked: boolean;
-  }>({ name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0, isActive: true, isNew: false, isBestSeller: false, isHandPicked: false });
+    categoryId: string; stock: number; stockCapacity: string;
+  } & ProductFormFlags>({
+    name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0, stockCapacity: "",
+    isActive: true, isNew: false, isBestSeller: false, isHandPicked: false, isCeramicFeatured: false,
+  });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editMainImg, setEditMainImg] = useState("");
@@ -64,7 +97,10 @@ export default function AdminProductsPage() {
   const editMainInputRef = useRef<HTMLInputElement>(null);
   const editExtraInputRef = useRef<HTMLInputElement>(null);
 
-  const blankForm = { name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0, isNew: false, isBestSeller: false, isHandPicked: false, isActive: true };
+  const blankForm = {
+    name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0, stockCapacity: "",
+    isNew: false, isBestSeller: false, isHandPicked: false, isCeramicFeatured: false, isActive: true,
+  };
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState(blankForm);
   const [createSaving, setCreateSaving] = useState(false);
@@ -140,10 +176,12 @@ export default function AdminProductsPage() {
       originalPrice: p.originalPrice ?? "",
       categoryId: p.categoryId ?? "",
       stock: p.stock,
+      stockCapacity: p.stockCapacity != null ? String(p.stockCapacity) : "",
       isActive: p.isActive,
       isNew: p.isNew,
       isBestSeller: p.isBestSeller,
       isHandPicked: p.isHandPicked,
+      isCeramicFeatured: p.isCeramicFeatured ?? false,
     });
     setEditMainImg(p.image);
     setEditExtraImgs(p.images ?? []);
@@ -154,6 +192,10 @@ export default function AdminProductsPage() {
     if (!editForm.name.trim()) return toast.error("Name is required");
     if (!editForm.price) return toast.error("Price is required");
     if (!editMainImg) return toast.error("Cover photo is required");
+    const parsedCap = parseStockCapacity(editForm.stockCapacity);
+    if (editForm.stockCapacity.trim() !== "" && parsedCap === null) {
+      return toast.error("Stock capacity must be a whole number of at least 1");
+    }
     setSaving(true);
     const r = await fetch(`/api/admin/products/${editing.id}`, {
       method: "PATCH",
@@ -167,10 +209,12 @@ export default function AdminProductsPage() {
         images: editExtraImgs.length ? editExtraImgs : null,
         categoryId: editForm.categoryId || null,
         stock: Number(editForm.stock),
+        stockCapacity: parsedCap,
         isActive: editForm.isActive,
         isNew: editForm.isNew,
         isBestSeller: editForm.isBestSeller,
         isHandPicked: editForm.isHandPicked,
+        isCeramicFeatured: editForm.isCeramicFeatured,
       }),
     });
     const d = await r.json();
@@ -188,7 +232,12 @@ export default function AdminProductsPage() {
     if (!createForm.name.trim()) return toast.error("Name is required");
     if (!createForm.price) return toast.error("Price is required");
     if (!mainImgUrl) return toast.error("Please upload a cover photo");
+    const parsedCreateCap = parseStockCapacity(createForm.stockCapacity);
+    if (createForm.stockCapacity.trim() !== "" && parsedCreateCap === null) {
+      return toast.error("Stock capacity must be a whole number of at least 1");
+    }
     setCreateSaving(true);
+    const stockNum = Number(createForm.stock);
     const body: Record<string, unknown> = {
       name: createForm.name.trim(),
       description: createForm.description.trim() || null,
@@ -197,10 +246,12 @@ export default function AdminProductsPage() {
       image: mainImgUrl,
       images: extraImgs.length ? extraImgs : null,
       categoryId: createForm.categoryId || null,
-      stock: Number(createForm.stock),
+      stock: stockNum,
+      stockCapacity: parsedCreateCap ?? Math.max(1, stockNum),
       isNew: createForm.isNew,
       isBestSeller: createForm.isBestSeller,
       isHandPicked: createForm.isHandPicked,
+      isCeramicFeatured: createForm.isCeramicFeatured,
       isActive: createForm.isActive,
     };
     const r = await fetch("/api/admin/products", {
@@ -302,7 +353,7 @@ export default function AdminProductsPage() {
                   <th className="px-4 py-3.5 font-semibold text-xs uppercase tracking-wide text-stone-400 text-left">Category</th>
                   <th className="px-4 py-3.5 font-semibold text-xs uppercase tracking-wide text-stone-400 text-left">Pricing</th>
                   <th className="px-4 py-3.5 font-semibold text-xs uppercase tracking-wide text-stone-400 text-left">Stock</th>
-                  <th className="px-4 py-3.5 font-semibold text-xs uppercase tracking-wide text-stone-400 text-left">Tags</th>
+                  <th className="px-4 py-3.5 font-semibold text-xs uppercase tracking-wide text-stone-400 text-left">Homepage</th>
                   <th className="px-4 py-3.5 font-semibold text-xs uppercase tracking-wide text-stone-400 text-left">Status</th>
                   <th className="px-4 py-3.5"></th>
                 </tr>
@@ -311,8 +362,14 @@ export default function AdminProductsPage() {
                 {products.map((prod) => {
                   const hasDiscount = prod.originalPrice && Number(prod.originalPrice) > Number(prod.price);
                   const discountPct = hasDiscount ? Math.round((1 - Number(prod.price) / Number(prod.originalPrice!)) * 100) : 0;
-                  const stockLow = prod.stock > 0 && prod.stock <= 10;
-                  const stockOut = prod.stock === 0;
+                  const {
+                    stockOut,
+                    stockLow,
+                    fillPct,
+                    hasCapacity,
+                    cap,
+                    overCapacity,
+                  } = adminStockDisplay(prod.stock, prod.stockCapacity);
                   return (
                     <tr key={prod.id} className={`hover:bg-stone-50/60 transition-colors group ${!prod.isActive ? "opacity-60" : ""}`}>
 
@@ -368,32 +425,45 @@ export default function AdminProductsPage() {
                             {stockLow && <IconAlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                             <span className={`font-semibold text-sm ${
                               stockOut ? "text-red-600" : stockLow ? "text-amber-600" : "text-stone-700"
-                            }`}>{prod.stock}</span>
+                            }`}>
+                              {prod.stock}
+                              {hasCapacity && cap != null && (
+                                <span className="text-stone-400 font-normal"> / {cap}</span>
+                              )}
+                            </span>
                             <span className="text-xs text-stone-400">units</span>
                           </div>
-                          <div className="w-20 h-1 bg-stone-100 rounded-full overflow-hidden">
+                          <div className="w-24 h-1 bg-stone-100 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full transition-all ${
-                              stockOut ? "bg-red-400" : stockLow ? "bg-amber-400" : "bg-emerald-400"
-                            }`} style={{ width: `${Math.min(100, (prod.stock / 200) * 100)}%` }} />
+                              stockOut ? "bg-red-400" : overCapacity ? "bg-sky-500" : stockLow ? "bg-amber-400" : "bg-emerald-400"
+                            }`} style={{ width: `${fillPct}%` }} />
                           </div>
                           {stockOut && <p className="text-xs font-medium text-red-500">Out of stock</p>}
-                          {stockLow && <p className="text-xs font-medium text-amber-500">Low stock</p>}
+                          {!stockOut && overCapacity && (
+                            <p className="text-xs font-medium text-sky-700">Above listed capacity</p>
+                          )}
+                          {!stockOut && !overCapacity && stockLow && (
+                            <p className="text-xs font-medium text-amber-600">Low (under 25% of capacity)</p>
+                          )}
                         </div>
                       </td>
 
-                      {/* Tags */}
+                      {/* Homepage section flags */}
                       <td className="px-4 py-4">
                         <div className="flex flex-wrap gap-1.5">
                           {prod.isNew && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full">New</span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full leading-tight max-w-[11rem]">Fresh to the Garden</span>
                           )}
                           {prod.isBestSeller && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-50 text-amber-600 border border-amber-100 px-2 py-0.5 rounded-full">Best Seller</span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-amber-50 text-amber-600 border border-amber-100 px-2 py-0.5 rounded-full leading-tight max-w-[11rem]">Flying Off the Shelves</span>
                           )}
                           {prod.isHandPicked && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium bg-pink-50 text-pink-600 border border-pink-100 px-2 py-0.5 rounded-full">Hand Picked</span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-pink-50 text-pink-600 border border-pink-100 px-2 py-0.5 rounded-full leading-tight max-w-[11rem]">Handpicked, Just For You!</span>
                           )}
-                          {!prod.isNew && !prod.isBestSeller && !prod.isHandPicked && (
+                          {prod.isCeramicFeatured && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-100 px-2 py-0.5 rounded-full leading-tight max-w-[11rem]">Handcrafted Ceramic Planters</span>
+                          )}
+                          {!prod.isNew && !prod.isBestSeller && !prod.isHandPicked && !prod.isCeramicFeatured && (
                             <span className="text-xs text-stone-300">—</span>
                           )}
                         </div>
@@ -658,35 +728,58 @@ export default function AdminProductsPage() {
                         </select>
                       </div>
                     </div>
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Stock capacity <span className="text-stone-400 font-normal">(optional)</span></label>
+                      <input type="number" min="1" step="1"
+                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                        placeholder={`Default: max(1, current qty)`}
+                        value={createForm.stockCapacity}
+                        onChange={(e) => setCreateForm(f => ({ ...f, stockCapacity: e.target.value }))}
+                      />
+                      <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">Planned max units for this product. Low stock and the admin bar use current ÷ capacity. Leave blank to default to your current stock quantity.</p>
+                    </div>
                   </div>
 
                   <div className="border-t border-stone-100" />
 
-                  {/* Tags */}
                   <div className="space-y-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Tags &amp; Visibility</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {([
-                        { key: "isActive" as const, label: "Active", desc: "Visible on store" },
-                        { key: "isNew" as const, label: "New Arrival", desc: "New arrivals section" },
-                        { key: "isBestSeller" as const, label: "Best Seller", desc: "Best sellers section" },
-                        { key: "isHandPicked" as const, label: "Hand Picked", desc: "Curated selection" },
-                      ]).map(({ key, label, desc }) => (
-                        <button type="button" key={key}
-                          onClick={() => setCreateForm(f => ({ ...f, [key]: !f[key] }))}
-                          className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
-                            createForm[key] ? "border-primary-400 bg-primary-50 shadow-sm" : "border-stone-200 bg-stone-50 hover:border-stone-300"
-                          }`}>
-                          <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            createForm[key] ? "border-primary-600 bg-primary-600" : "border-stone-300"
-                          }`}>
-                            {createForm[key] && <IconCheck className="w-2.5 h-2.5 text-white" />}
-                          </div>
-                          <div>
-                            <p className={`text-xs font-semibold transition-colors ${createForm[key] ? "text-primary-700" : "text-stone-700"}`}>{label}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Store visibility</p>
+                    <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
+                      <div className="min-w-0">
+                        <p id="create-store-active-label" className="text-xs font-semibold text-stone-700">Active</p>
+                        <p className="text-xs text-stone-400 mt-0.5">Visible in the store catalog</p>
+                      </div>
+                      <Switch
+                        checked={createForm.isActive}
+                        onCheckedChange={(v) => setCreateForm((f) => ({ ...f, isActive: v }))}
+                        aria-labelledby="create-store-active-label"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-stone-100" />
+
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Homepage sections</p>
+                    <p className="text-xs text-stone-500">Toggle which carousels include this product.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {HOMEPAGE_SECTION_OPTIONS.map(({ key, label, desc }) => (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-stone-200 bg-stone-50"
+                        >
+                          <div className="min-w-0 pr-2">
+                            <p id={`create-hp-${key}`} className="text-xs font-semibold text-stone-700">
+                              {label}
+                            </p>
                             <p className="text-xs text-stone-400 mt-0.5">{desc}</p>
                           </div>
-                        </button>
+                          <Switch
+                            checked={createForm[key]}
+                            onCheckedChange={(v) => setCreateForm((f) => ({ ...f, [key]: v }))}
+                            aria-labelledby={`create-hp-${key}`}
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -898,35 +991,58 @@ export default function AdminProductsPage() {
                         </select>
                       </div>
                     </div>
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Stock capacity <span className="text-stone-400 font-normal">(optional)</span></label>
+                      <input type="number" min="1" step="1"
+                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                        placeholder="e.g. warehouse max for this SKU"
+                        value={editForm.stockCapacity}
+                        onChange={(e) => setEditForm(f => ({ ...f, stockCapacity: e.target.value }))}
+                      />
+                      <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">Clear to remove relative levels (table will prompt to set capacity). Low stock when current is under 25% of this value.</p>
+                    </div>
                   </div>
 
                   <div className="border-t border-stone-100" />
 
-                  {/* Tags */}
                   <div className="space-y-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Tags &amp; Visibility</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {([
-                        { key: "isActive" as const, label: "Active", desc: "Visible on store" },
-                        { key: "isNew" as const, label: "New Arrival", desc: "New arrivals section" },
-                        { key: "isBestSeller" as const, label: "Best Seller", desc: "Best sellers section" },
-                        { key: "isHandPicked" as const, label: "Hand Picked", desc: "Curated selection" },
-                      ]).map(({ key, label, desc }) => (
-                        <button type="button" key={key}
-                          onClick={() => setEditForm(f => ({ ...f, [key]: !f[key] }))}
-                          className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
-                            editForm[key] ? "border-primary-400 bg-primary-50 shadow-sm" : "border-stone-200 bg-stone-50 hover:border-stone-300"
-                          }`}>
-                          <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            editForm[key] ? "border-primary-600 bg-primary-600" : "border-stone-300"
-                          }`}>
-                            {editForm[key] && <IconCheck className="w-2.5 h-2.5 text-white" />}
-                          </div>
-                          <div>
-                            <p className={`text-xs font-semibold transition-colors ${editForm[key] ? "text-primary-700" : "text-stone-700"}`}>{label}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Store visibility</p>
+                    <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
+                      <div className="min-w-0">
+                        <p id="edit-store-active-label" className="text-xs font-semibold text-stone-700">Active</p>
+                        <p className="text-xs text-stone-400 mt-0.5">Visible in the store catalog</p>
+                      </div>
+                      <Switch
+                        checked={editForm.isActive}
+                        onCheckedChange={(v) => setEditForm((f) => ({ ...f, isActive: v }))}
+                        aria-labelledby="edit-store-active-label"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-stone-100" />
+
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Homepage sections</p>
+                    <p className="text-xs text-stone-500">Toggle which carousels include this product.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {HOMEPAGE_SECTION_OPTIONS.map(({ key, label, desc }) => (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-stone-200 bg-stone-50"
+                        >
+                          <div className="min-w-0 pr-2">
+                            <p id={`edit-hp-${key}`} className="text-xs font-semibold text-stone-700">
+                              {label}
+                            </p>
                             <p className="text-xs text-stone-400 mt-0.5">{desc}</p>
                           </div>
-                        </button>
+                          <Switch
+                            checked={editForm[key]}
+                            onCheckedChange={(v) => setEditForm((f) => ({ ...f, [key]: v }))}
+                            aria-labelledby={`edit-hp-${key}`}
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>

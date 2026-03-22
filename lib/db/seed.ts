@@ -89,6 +89,7 @@ async function seed() {
       categoryId: categoryMap["pots-planters"],
       stock: 40,
       isHandPicked: true,
+      isCeramicFeatured: true,
       isActive: true,
     },
 

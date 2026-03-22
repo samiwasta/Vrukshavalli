@@ -30,6 +30,7 @@ import {
   IconPackage,
   IconMessage,
   IconGift,
+  IconSpray,
 } from "@tabler/icons-react";
 
 interface Stats {
@@ -42,6 +43,7 @@ interface Stats {
   processingOrders: number;
   totalContacts: number;
   totalGifting: number;
+  totalGardenServices: number;
   activeCoupons: number;
   statusBreakdown: { status: string; cnt: number }[];
   recentOrders: {
@@ -116,6 +118,7 @@ export default function AdminOverviewPage() {
     { name: "Users",    value: stats.totalUsers,    fill: "#8b5cf6" },
     { name: "Contacts", value: stats.totalContacts, fill: "#f43f5e" },
     { name: "Gifting",  value: stats.totalGifting,  fill: "#ec4899" },
+    { name: "Garden",   value: stats.totalGardenServices ?? 0, fill: "#059669" },
     { name: "Coupons",  value: stats.activeCoupons ?? 0, fill: "#14b8a6" },
   ];
 
@@ -172,12 +175,13 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* ── Secondary metric cards ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
             { label: "Processing",       value: stats.processingOrders ?? 0, icon: IconPackage, color: "text-blue-500",   bg: "bg-blue-50",   href: "/admin/orders" },
             { label: "Active Coupons",   value: stats.activeCoupons ?? 0,    icon: IconTag,     color: "text-teal-600",   bg: "bg-teal-50",   href: "/admin/coupons" },
             { label: "Contact Messages", value: stats.totalContacts ?? 0,    icon: IconMessage, color: "text-rose-500",   bg: "bg-rose-50",   href: "/admin/contact" },
             { label: "Gifting Enquiries",value: stats.totalGifting ?? 0,     icon: IconGift,    color: "text-pink-500",   bg: "bg-pink-50",   href: "/admin/gifting" },
+            { label: "Garden Services",  value: stats.totalGardenServices ?? 0, icon: IconSpray,  color: "text-primary-600", bg: "bg-primary-50", href: "/admin/garden-services" },
           ].map((card) => (
             <Link key={card.label} href={card.href} className="bg-white rounded-xl border border-stone-200 p-4 flex items-center gap-3 hover:shadow-sm transition-all group">
               <div className={`w-8 h-8 rounded-lg ${card.bg} flex items-center justify-center shrink-0`}>

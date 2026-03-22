@@ -6,6 +6,7 @@ import { users } from "@/lib/db/schema/users";
 import { coupons } from "@/lib/db/schema/coupons";
 import { contactSubmissions } from "@/lib/db/schema/contact-submissions";
 import { giftingEnquiries } from "@/lib/db/schema/gifting-enquiries";
+import { gardenServiceEnquiries } from "@/lib/db/schema/garden-service-enquiries";
 import { count, sum, eq, desc, and } from "drizzle-orm";
 import { requireAdmin } from "@/lib/admin-auth";
 
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     [{ processingOrders }],
     [{ totalContacts }],
     [{ totalGifting }],
+    [{ totalGardenServices }],
     [{ activeCoupons }],
     statusBreakdown,
   ] = await Promise.all([
@@ -35,6 +37,9 @@ export async function GET(request: Request) {
     db.select({ processingOrders: count() }).from(orders).where(eq(orders.status, "processing")),
     db.select({ totalContacts: count() }).from(contactSubmissions),
     db.select({ totalGifting: count() }).from(giftingEnquiries),
+    db
+      .select({ totalGardenServices: count() })
+      .from(gardenServiceEnquiries),
     db.select({ activeCoupons: count() }).from(coupons).where(eq(coupons.isActive, true)),
     db.select({ status: orders.status, cnt: count() }).from(orders).groupBy(orders.status),
   ]);
@@ -68,6 +73,7 @@ export async function GET(request: Request) {
       processingOrders,
       totalContacts,
       totalGifting,
+      totalGardenServices,
       activeCoupons,
       statusBreakdown,
       recentOrders,
