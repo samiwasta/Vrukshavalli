@@ -1,7 +1,13 @@
 import { pgTable, text, integer, timestamp, boolean, decimal, uuid, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 import { categories } from "./categories";
+
+const decimalFromApi = z.union([
+  z.string(),
+  z.number().transform((n) => String(n)),
+]);
 
 
 export const products = pgTable("products", {
@@ -39,7 +45,11 @@ export const productsRelations = relations(products, ({ one }) => ({
   }),
 }));
 
-export const insertProductSchema = createInsertSchema(products);
+export const insertProductSchema = createInsertSchema(products, {
+  price: decimalFromApi,
+  originalPrice: z.union([decimalFromApi, z.null()]).optional(),
+  rating: z.union([decimalFromApi, z.null()]).optional(),
+});
 export const selectProductSchema = createSelectSchema(products);
 
 export type Product = typeof products.$inferSelect;

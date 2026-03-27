@@ -52,14 +52,6 @@ type ProductFormFlags = {
   isCeramicFeatured: boolean;
 };
 
-function parseStockCapacity(raw: string): number | null {
-  const t = raw.trim();
-  if (!t) return null;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n < 1) return null;
-  return Math.floor(n);
-}
-
 const HOMEPAGE_SECTION_OPTIONS: {
   key: keyof Pick<ProductFormFlags, "isNew" | "isBestSeller" | "isHandPicked" | "isCeramicFeatured">;
   label: string;
@@ -83,9 +75,9 @@ export default function AdminProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [editForm, setEditForm] = useState<{
     name: string; description: string; price: string; originalPrice: string;
-    categoryId: string; stock: number; stockCapacity: string;
+    categoryId: string; stock: number;
   } & ProductFormFlags>({
-    name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0, stockCapacity: "",
+    name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0,
     isActive: true, isNew: false, isBestSeller: false, isHandPicked: false, isCeramicFeatured: false,
   });
   const [saving, setSaving] = useState(false);
@@ -98,7 +90,7 @@ export default function AdminProductsPage() {
   const editExtraInputRef = useRef<HTMLInputElement>(null);
 
   const blankForm = {
-    name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0, stockCapacity: "",
+    name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: "",
     isNew: false, isBestSeller: false, isHandPicked: false, isCeramicFeatured: false, isActive: true,
   };
   const [creating, setCreating] = useState(false);
@@ -176,7 +168,6 @@ export default function AdminProductsPage() {
       originalPrice: p.originalPrice ?? "",
       categoryId: p.categoryId ?? "",
       stock: p.stock,
-      stockCapacity: p.stockCapacity != null ? String(p.stockCapacity) : "",
       isActive: p.isActive,
       isNew: p.isNew,
       isBestSeller: p.isBestSeller,
@@ -192,9 +183,8 @@ export default function AdminProductsPage() {
     if (!editForm.name.trim()) return toast.error("Name is required");
     if (!editForm.price) return toast.error("Price is required");
     if (!editMainImg) return toast.error("Cover photo is required");
-    const parsedCap = parseStockCapacity(editForm.stockCapacity);
-    if (editForm.stockCapacity.trim() !== "" && parsedCap === null) {
-      return toast.error("Stock capacity must be a whole number of at least 1");
+    if (!Number.isFinite(editForm.stock) || !Number.isInteger(editForm.stock) || editForm.stock < 0) {
+      return toast.error("Stock quantity must be a whole number of 0 or more");
     }
     setSaving(true);
     const r = await fetch(`/api/admin/products/${editing.id}`, {
@@ -208,8 +198,8 @@ export default function AdminProductsPage() {
         image: editMainImg,
         images: editExtraImgs.length ? editExtraImgs : null,
         categoryId: editForm.categoryId || null,
-        stock: Number(editForm.stock),
-        stockCapacity: parsedCap,
+        stock: editForm.stock,
+        stockCapacity: editForm.stock > 0 ? editForm.stock : null,
         isActive: editForm.isActive,
         isNew: editForm.isNew,
         isBestSeller: editForm.isBestSeller,
@@ -232,12 +222,17 @@ export default function AdminProductsPage() {
     if (!createForm.name.trim()) return toast.error("Name is required");
     if (!createForm.price) return toast.error("Price is required");
     if (!mainImgUrl) return toast.error("Please upload a cover photo");
-    const parsedCreateCap = parseStockCapacity(createForm.stockCapacity);
-    if (createForm.stockCapacity.trim() !== "" && parsedCreateCap === null) {
-      return toast.error("Stock capacity must be a whole number of at least 1");
+    const stockRaw = String(createForm.stock).trim();
+    const stockNum = Number(stockRaw);
+    if (
+      stockRaw === "" ||
+      !Number.isFinite(stockNum) ||
+      !Number.isInteger(stockNum) ||
+      stockNum < 1
+    ) {
+      return toast.error("Stock quantity must be a whole number of at least 1");
     }
     setCreateSaving(true);
-    const stockNum = Number(createForm.stock);
     const body: Record<string, unknown> = {
       name: createForm.name.trim(),
       description: createForm.description.trim() || null,
@@ -247,7 +242,7 @@ export default function AdminProductsPage() {
       images: extraImgs.length ? extraImgs : null,
       categoryId: createForm.categoryId || null,
       stock: stockNum,
-      stockCapacity: parsedCreateCap ?? Math.max(1, stockNum),
+      stockCapacity: stockNum,
       isNew: createForm.isNew,
       isBestSeller: createForm.isBestSeller,
       isHandPicked: createForm.isHandPicked,
@@ -710,10 +705,11 @@ export default function AdminProductsPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs font-medium text-stone-600 block mb-1.5">Stock Quantity</label>
-                        <input type="number" min="0"
+                        <input type="number" min="1" step="1"
                           className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                          placeholder="e.g. 10"
                           value={createForm.stock}
-                          onChange={(e) => setCreateForm(f => ({ ...f, stock: Number(e.target.value) }))}
+                          onChange={(e) => setCreateForm((f) => ({ ...f, stock: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -727,16 +723,6 @@ export default function AdminProductsPage() {
                           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Stock capacity <span className="text-stone-400 font-normal">(optional)</span></label>
-                      <input type="number" min="1" step="1"
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                        placeholder={`Default: max(1, current qty)`}
-                        value={createForm.stockCapacity}
-                        onChange={(e) => setCreateForm(f => ({ ...f, stockCapacity: e.target.value }))}
-                      />
-                      <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">Planned max units for this product. Low stock and the admin bar use current ÷ capacity. Leave blank to default to your current stock quantity.</p>
                     </div>
                   </div>
 
@@ -990,16 +976,6 @@ export default function AdminProductsPage() {
                           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Stock capacity <span className="text-stone-400 font-normal">(optional)</span></label>
-                      <input type="number" min="1" step="1"
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                        placeholder="e.g. warehouse max for this SKU"
-                        value={editForm.stockCapacity}
-                        onChange={(e) => setEditForm(f => ({ ...f, stockCapacity: e.target.value }))}
-                      />
-                      <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">Clear to remove relative levels (table will prompt to set capacity). Low stock when current is under 25% of this value.</p>
                     </div>
                   </div>
 
