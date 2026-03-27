@@ -7,7 +7,7 @@ import { coupons } from "@/lib/db/schema/coupons";
 import { contactSubmissions } from "@/lib/db/schema/contact-submissions";
 import { giftingEnquiries } from "@/lib/db/schema/gifting-enquiries";
 import { gardenServiceEnquiries } from "@/lib/db/schema/garden-service-enquiries";
-import { count, sum, eq, desc, and } from "drizzle-orm";
+import { count, sum, eq, desc, and, ne } from "drizzle-orm";
 import { requireAdmin } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
@@ -32,7 +32,10 @@ export async function GET(request: Request) {
     db.select({ totalRevenue: sum(orders.totalAmount) }).from(orders).where(eq(orders.paymentStatus, "paid")),
     db.select({ totalProducts: count() }).from(products).where(eq(products.isActive, true)),
     db.select({ outOfStock: count() }).from(products).where(and(eq(products.isActive, true), eq(products.stock, 0))),
-    db.select({ totalUsers: count() }).from(users),
+    db
+      .select({ totalUsers: count() })
+      .from(users)
+      .where(ne(users.role, "admin")),
     db.select({ pendingOrders: count() }).from(orders).where(eq(orders.status, "pending")),
     db.select({ processingOrders: count() }).from(orders).where(eq(orders.status, "processing")),
     db.select({ totalContacts: count() }).from(contactSubmissions),

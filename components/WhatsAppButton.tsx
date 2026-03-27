@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 
 const WHATSAPP_NUMBER = "917719890777";
 const WHATSAPP_MESSAGE = "Hi! I'd like to know more about your plants 🌿";
 
 export default function WhatsAppButton() {
+  const pathname = usePathname();
   const [hovered, setHovered] = useState(false);
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
