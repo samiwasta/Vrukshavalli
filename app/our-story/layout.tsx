@@ -2,9 +2,9 @@ import Navbar from "@/app/features/navbar/Navbar";
 import Footer from "@/app/features/footer/Footer";
 
 export const metadata = {
-  title: "Our Story — Vrikshavalli",
+  title: "Our Story — Vrukshavalli",
   description:
-    "From a family nursery rooted in 1993 to a thriving plant boutique — the story of Madhuri and Pratik, and why we started Vrikshavalli.",
+    "From a family nursery rooted in 1993 to a thriving plant boutique — the story of Madhuri and Pratik, and why we started Vrukshavalli.",
 };
 
 export default function OurStoryLayout({

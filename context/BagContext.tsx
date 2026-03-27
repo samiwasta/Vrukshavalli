@@ -32,7 +32,7 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
 
   // ✅ Load from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem("vrikshavalli_bag");
+    const stored = localStorage.getItem("vrukshavalli_bag");
     if (stored) {
       setItems(JSON.parse(stored));
     }
@@ -40,7 +40,7 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
 
   // ✅ Persist to localStorage
   useEffect(() => {
-    localStorage.setItem("vrikshavalli_bag", JSON.stringify(items));
+    localStorage.setItem("vrukshavalli_bag", JSON.stringify(items));
   }, [items]);
 
   const addItem = (item: BagItem) => {
@@ -82,7 +82,7 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
     );
 
   const clearBag = () => {
-    localStorage.removeItem("vrikshavalli_bag");
+    localStorage.removeItem("vrukshavalli_bag");
     setItems([]);
   };
 

@@ -29,7 +29,7 @@ export interface WishlistItem {
   isHandPicked?: boolean;
 }
 
-const STORAGE_KEY = "vrikshavalli-wishlist";
+const STORAGE_KEY = "vrukshavalli-wishlist";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

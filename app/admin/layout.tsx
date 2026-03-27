@@ -6,7 +6,7 @@ import { users } from "@/lib/db/schema/users";
 import { eq } from "drizzle-orm";
 import { AdminSidebar } from "./AdminSidebar";
 
-export const metadata = { title: "Admin — Vrikshavalli" };
+export const metadata = { title: "Admin — Vrukshavalli" };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const h = await headers();

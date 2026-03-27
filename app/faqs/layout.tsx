@@ -3,9 +3,9 @@ import Footer from "@/app/features/footer/Footer";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FAQs — Vrikshavalli",
+  title: "FAQs — Vrukshavalli",
   description:
-    "Frequently asked questions about ordering, delivery, plant care, and more at Vrikshavalli.",
+    "Frequently asked questions about ordering, delivery, plant care, and more at Vrukshavalli.",
 };
 
 export default function FAQsLayout({ children }: { children: React.ReactNode }) {

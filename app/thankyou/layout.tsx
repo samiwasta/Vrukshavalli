@@ -2,7 +2,7 @@ import Navbar from "@/app/features/navbar/Navbar";
 import Footer from "@/app/features/footer/Footer";
 
 export const metadata = {
-  title: "Order Confirmed — Vrikshavalli",
+  title: "Order Confirmed — Vrukshavalli",
   description: "Your order has been placed successfully.",
 };
 

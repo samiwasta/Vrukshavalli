@@ -1,4 +1,4 @@
-# Vrikshavalli — Progress, backlog & production checklist
+# Vrukshavalli — Progress, backlog & production checklist
 
 > **Stack:** Next.js 16 (App Router) · Drizzle ORM · Neon (PostgreSQL) · Better Auth · Cashfree · Zod · UploadThing · Recharts · Gemini  
 > **DB:** `pnpm db:push` + `pnpm db:seed` for quick local setup · `pnpm db:migrate` for production (versioned SQL under `lib/db/migrations/`)

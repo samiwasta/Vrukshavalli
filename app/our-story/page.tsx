@@ -80,7 +80,7 @@ function SectionHeading({
 
 const STATS = [
   { value: "1993", label: "Legacy since" },
-  { value: "2017", label: "Vrikshavalli founded" },
+  { value: "2017", label: "Vrukshavalli founded" },
   { value: "10,000+", label: "Happy customers" },
   { value: "33,000+", label: "Online community" },
 ];

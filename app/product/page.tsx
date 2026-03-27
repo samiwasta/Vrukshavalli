@@ -50,8 +50,8 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const categoryInfo = CATEGORY_META[validCategory];
   
   return {
-    title: `${categoryInfo.title} — Vrikshavalli`,
-    description: `${categoryInfo.subtitle}. Shop premium ${categoryInfo.title.toLowerCase()} online at Vrikshavalli.`,
+    title: `${categoryInfo.title} — Vrukshavalli`,
+    description: `${categoryInfo.subtitle}. Shop premium ${categoryInfo.title.toLowerCase()} online at Vrukshavalli.`,
   };
 }
 

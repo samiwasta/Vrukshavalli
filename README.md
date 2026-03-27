@@ -1,4 +1,4 @@
-# Vrikshavalli
+# Vrukshavalli
 
 India's premier luxury plant e-commerce destination — indoor and outdoor plants, planters, seeds, plant care products, and accessories with expert care guides and nationwide delivery.
 
@@ -133,7 +133,7 @@ The admin panel is at [http://localhost:3000/admin](http://localhost:3000/admin)
 ## Project Structure
 
 ```
-vrikshavalli/
+vrukshavalli/
 ├── app/
 │   ├── (auth)/               # Auth pages (login, register, post-login redirect)
 │   ├── about-us/
@@ -344,7 +344,7 @@ The app is designed for deployment on [Vercel](https://vercel.com).
 
 1. Connect the repository to a Vercel project.
 2. Set all environment variables from `.env.local` in the Vercel dashboard (including Cashfree and UploadThing).
-3. Set `BETTER_AUTH_URL` to your production domain (e.g. `https://vrikshavalli.com`).
+3. Set `BETTER_AUTH_URL` to your production domain (e.g. `https://vrukshavalli.com`).
 4. Update the Google OAuth authorised redirect URI to `https://<your-domain>/api/auth/callback/google`.
 5. In Cashfree dashboard, point the payment webhook to `https://<your-domain>/api/payments/webhook`.
 6. Deploy — `pnpm build` runs automatically.

@@ -18,21 +18,21 @@ const CAROUSEL_ITEMS = [
     title: "Where green meets grace.",
     description:
       "Curated plants and planters for a calm, elevated space. Quality, care, and a touch of luxury delivered to your door.",
-    image: "/carousel-2.jpg",
+    image: "/3.webp",
     cta: { label: "Explore products", href: "/product" },
   },
   {
     title: "Create your ideal workspace.",
     description:
       "Bring nature into your home with our carefully selected indoor plants. Easy care, unique beauty, and a productive calm.",
-    image: "/carousel-1.jpg",
+    image: "/2.webp",
     cta: { label: "Shop now", href: "/product" },
   },
   {
     title: "Nurture your space.",
     description:
       "Expert plant care guides and premium planters. Elevate every corner with rare greens and thoughtful design.",
-    image: "/carousel-3.jpg",
+    image: "/1.webp",
     cta: { label: "Get in touch", href: "/contact" },
   },
 ];

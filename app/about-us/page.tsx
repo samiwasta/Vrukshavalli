@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -102,21 +103,21 @@ const FOUNDERS = [
     name: "Madhuri",
     role: "Co-founder & CEO",
     qual: "B.Tech — Agricultural Engineering",
-    bio: "Madhuri left a well-paying corporate career in Mumbai to follow a deeper calling. With a background in agricultural engineering and a passion for sustainable living, she leads Vrikshavalli's vision, operations, and digital presence.",
+    bio: "Madhuri left a well-paying corporate career in Mumbai to follow a deeper calling. With a background in agricultural engineering and a passion for sustainable living, she leads Vrukshavalli's vision, operations, and digital presence.",
     tags: ["Agri-tech", "Sustainability", "Rural Empowerment"],
     accent: "border-primary-100 bg-primary-50/40",
     tagAccent: "bg-primary-100 text-primary-700",
-    emoji: "🌿",
+    image: "/madhuri.webp",
   },
   {
     name: "Pratik",
     role: "Co-founder & Head Horticulturist",
     qual: "B.Sc — Horticulture",
-    bio: "Pratik grew up in a family nursery rooted since 1993. His deep, hands-on knowledge of plants, soil, and seasons is the backbone of every product and service at Vrikshavalli. For him, plants have always been living relationships.",
+    bio: "Pratik grew up in a family nursery rooted since 1993. His deep, hands-on knowledge of plants, soil, and seasons is the backbone of every product and service at Vrukshavalli. For him, plants have always been living relationships.",
     tags: ["Horticulture", "Landscaping", "Nursery"],
     accent: "border-emerald-100 bg-emerald-50/40",
     tagAccent: "bg-emerald-100 text-emerald-700",
-    emoji: "🌱",
+    image: "/pratik.webp",
   },
 ];
 
@@ -225,7 +226,7 @@ export default function AboutUsPage() {
             </div>
 
             <h1 className="font-mono text-3xl font-bold text-white sm:text-5xl leading-tight">
-              We Are Vrikshavalli
+              We Are Vrukshavalli
             </h1>
 
             <p className="mt-6 text-base sm:text-lg text-primary-100/85 max-w-2xl mx-auto leading-relaxed">
@@ -297,36 +298,47 @@ export default function AboutUsPage() {
               <FadeUp key={f.name} delay={i * 0.1}>
                 <div
                   className={cn(
-                    "rounded-3xl border p-8 h-full flex flex-col gap-5",
-                    f.accent
+                    "group flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-primary-100/50 bg-white shadow-sm transition-colors hover:border-primary-200"
                   )}
                 >
-                  {/* Avatar placeholder */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-zinc-100 shadow-sm text-3xl shrink-0">
-                      {f.emoji}
-                    </div>
+                  <div className="relative aspect-square w-full overflow-hidden bg-linear-to-br from-primary-50 to-primary-100/30">
+                    <Image
+                      src={f.image}
+                      alt={`${f.name}, ${f.role}`}
+                      fill
+                      className="object-contain transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+                      priority={i === 0}
+                    />
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex flex-1 flex-col gap-4 p-6 sm:p-8",
+                      f.accent
+                    )}
+                  >
                     <div>
                       <p className="font-mono text-xl font-bold text-zinc-900">{f.name}</p>
                       <p className="text-sm font-semibold text-zinc-500">{f.role}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5">{f.qual}</p>
+                      <p className="mt-0.5 text-xs text-zinc-400">{f.qual}</p>
                     </div>
-                  </div>
 
-                  <p className="text-sm leading-7 text-zinc-600">{f.bio}</p>
+                    <p className="text-sm leading-7 text-zinc-600">{f.bio}</p>
 
-                  <div className="flex flex-wrap gap-2 mt-auto">
-                    {f.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={cn(
-                          "rounded-full px-3 py-1 text-[11px] font-bold",
-                          f.tagAccent
-                        )}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    <div className="mt-auto flex flex-wrap gap-2 pt-1">
+                      {f.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={cn(
+                            "rounded-full px-3 py-1 text-[11px] font-bold",
+                            f.tagAccent
+                          )}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </FadeUp>
@@ -360,7 +372,7 @@ export default function AboutUsPage() {
                   variant="outline"
                   className="rounded-full border-amber-200 text-amber-700 hover:bg-amber-100 shadow-none text-sm"
                 >
-                  Learn More
+                  Know More
                   <IconArrowRight size={14} className="ml-1" />
                 </Button>
               </Link>
@@ -376,7 +388,7 @@ export default function AboutUsPage() {
             <SectionLabel>What We Do</SectionLabel>
             <SectionHeading>Everything Green, Under One Roof</SectionHeading>
             <p className="mt-4 text-zinc-500 max-w-xl mx-auto text-sm leading-7">
-              From a single sapling to a full garden transformation — Vrikshavalli is your
+              From a single sapling to a full garden transformation — Vrukshavalli is your
               complete plant destination.
             </p>
           </FadeUp>
@@ -408,7 +420,7 @@ export default function AboutUsPage() {
         </div>
       </section>
 
-      {/* ── WHY VRIKSHAVALLI ─────────────────────────────────────────────── */}
+      {/* ── WHY vrukshavalli ─────────────────────────────────────────────── */}
       <section className="py-16 sm:py-24 bg-primary-600">
         <div className="container mx-auto max-w-5xl px-4 sm:px-6">
           <FadeUp className="text-center mb-12">
@@ -418,7 +430,7 @@ export default function AboutUsPage() {
                 Why Us
               </span>
             </div>
-            <SectionHeading className="text-white">Why Vrikshavalli?</SectionHeading>
+            <SectionHeading className="text-white">Why Vrukshavalli?</SectionHeading>
           </FadeUp>
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -485,48 +497,62 @@ export default function AboutUsPage() {
                     bg: "bg-rose-50/40",
                   },
                 ] satisfies WhereWeAreCard[]
-              ).map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href ?? "#"}
-                  target={item.href?.startsWith("http") ? "_blank" : undefined}
-                  rel="noreferrer"
-                  className={cn(
-                    "flex items-start gap-4 rounded-2xl border p-5 transition-opacity hover:opacity-80",
-                    item.border,
-                    item.bg
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl mt-0.5",
-                      item.iconBg
-                    )}
-                  >
-                    <item.icon size={20} className={item.iconColor} />
+              ).map((item) => {
+                const shellClass = cn(
+                  "flex items-start gap-4 rounded-2xl border p-5 transition-opacity hover:opacity-80",
+                  item.border,
+                  item.bg
+                );
+                const body = (
+                  <>
+                    <div
+                      className={cn(
+                        "mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                        item.iconBg
+                      )}
+                    >
+                      <item.icon size={20} className={item.iconColor} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="mb-0.5 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+                        {item.label}
+                      </p>
+                      <p className="whitespace-pre-line text-sm font-semibold text-zinc-800">
+                        {item.value}
+                      </p>
+                      {item.mapsHref ? (
+                        <a
+                          href={item.mapsHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-white px-3 py-1 text-[11px] font-bold text-primary-600 transition-colors hover:bg-primary-50"
+                        >
+                          <IconNavigation size={12} />
+                          Get Directions
+                        </a>
+                      ) : null}
+                    </div>
+                  </>
+                );
+                if (item.href) {
+                  return (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      target={item.href.startsWith("http") ? "_blank" : undefined}
+                      rel={item.href.startsWith("http") ? "noreferrer" : undefined}
+                      className={shellClass}
+                    >
+                      {body}
+                    </a>
+                  );
+                }
+                return (
+                  <div key={item.label} className={shellClass}>
+                    {body}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-0.5">
-                      {item.label}
-                    </p>
-                    <p className="text-sm font-semibold text-zinc-800 whitespace-pre-line">
-                      {item.value}
-                    </p>
-                    {item.mapsHref ? (
-                      <a
-                        href={item.mapsHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-white px-3 py-1 text-[11px] font-bold text-primary-600 hover:bg-primary-50 transition-colors"
-                      >
-                        <IconNavigation size={12} />
-                        Get Directions
-                      </a>
-                    ) : null}
-                  </div>
-                </a>
-              ))}
+                );
+              })}
             </FadeUp>
 
             {/* Pan-India reach card */}
