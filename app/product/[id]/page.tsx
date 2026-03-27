@@ -97,9 +97,9 @@ export default function ProductDetailPage() {
   const [copied, setCopied] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
-  // Reset size selection when product changes
   useEffect(() => {
     setSelectedSize(null);
+    setActiveImage(0);
   }, [id]);
 
   const isFav = product ? wishlist.has(product.id) : false;
@@ -116,6 +116,15 @@ export default function ProductDetailPage() {
 
         if (json.success) {
           const p = json.data;
+          const extra = p.images;
+          const gallery =
+            Array.isArray(extra) && extra.length > 0
+              ? extra.filter(
+                  (u): u is string => typeof u === "string" && u.length > 0,
+                )
+              : p.image
+                ? [p.image]
+                : [];
 
           setProduct({
             ...p,
@@ -125,9 +134,16 @@ export default function ProductDetailPage() {
             originalPrice: p.originalPrice
             ? Number(p.originalPrice)
             : undefined,
-            rating: Number(p.rating),
+            rating: Number(p.rating ?? 0),
+            reviewCount: Number(p.reviewCount ?? 0),
             stock: Number(p.stock ?? 0),
             stockCapacity: p.stockCapacity ?? null,
+            images: gallery,
+            careLevel: p.careLevel ?? "Easy",
+            light: p.light ?? "—",
+            water: p.water ?? "—",
+            size: p.size ?? "—",
+            petFriendly: Boolean(p.petFriendly),
           });
         } else {
           setProduct(null);
