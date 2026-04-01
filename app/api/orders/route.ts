@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema/orders";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, ne, and } from "drizzle-orm";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser(request);
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const userOrders = await db
     .select()
     .from(orders)
-    .where(eq(orders.userId, user.id))
+    .where(and(eq(orders.userId, user.id), ne(orders.paymentStatus, "pending")))
     .orderBy(desc(orders.createdAt));
 
   const data = userOrders.map((o) => {

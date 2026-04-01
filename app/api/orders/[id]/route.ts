@@ -55,20 +55,24 @@ export async function GET(
     );
   }
 
-  // Fallback if Cashfree webhook is delayed: payment status is normally set by POST /api/payments/webhook
   if (order.paymentStatus === "pending") {
     const payment = await verifyCashfreePayment(id);
     if (payment?.payment_status === "SUCCESS") {
       const [updated] = await db
         .update(orders)
-        .set({ paymentStatus: "paid", status: "processing", paymentId: payment.cf_payment_id })
+        .set({ paymentStatus: "paid", status: "processing", paymentId: payment.cf_payment_id, updatedAt: new Date() })
         .where(eq(orders.id, id))
         .returning();
       if (updated) order = updated;
-    } else if (payment?.payment_status === "FAILED") {
+    } else if (
+      payment?.payment_status === "FAILED" ||
+      payment?.payment_status === "USER_DROPPED" ||
+      payment?.payment_status === "CANCELLED" ||
+      payment?.payment_status === "NOT_ATTEMPTED"
+    ) {
       const [updated] = await db
         .update(orders)
-        .set({ paymentStatus: "failed" })
+        .set({ paymentStatus: "failed", status: "cancelled", updatedAt: new Date() })
         .where(eq(orders.id, id))
         .returning();
       if (updated) order = updated;

@@ -111,9 +111,11 @@ function SectionTitle({
 
 function ThankYouContent() {
   const searchParams = useSearchParams();
+  const { clearBag } = useBag();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bagCleared, setBagCleared] = useState(false);
 
   useEffect(() => {
     const orderId = searchParams.get("order_id");
@@ -123,20 +125,65 @@ function ThankYouContent() {
       return;
     }
 
-    fetch(`/api/orders/${orderId}`)
-      .then(async (res) => {
+    let cancelled = false;
+    let attempt = 0;
+    const MAX_POLLS = 8;
+    const POLL_INTERVAL = 2500;
+
+    async function fetchOrder() {
+      try {
+        const res = await fetch(`/api/orders/${orderId}`);
         if (res.status === 401) throw new Error("Please log in to view this order.");
         if (res.status === 404) throw new Error("Order not found.");
         if (!res.ok) throw new Error("Failed to load order details.");
         const json = await res.json();
         if (!json.success) throw new Error("Failed to load order details.");
-        setOrder(json.data);
-      })
-      .catch((err: unknown) => {
+        return json.data as Order;
+      } catch (err: unknown) {
+        throw err instanceof Error ? err : new Error("Something went wrong.");
+      }
+    }
+
+    async function poll() {
+      try {
+        const data = await fetchOrder();
+        if (cancelled) return;
+        setOrder(data);
+
+        if (data.paymentStatus === "paid") {
+          setLoading(false);
+          return;
+        }
+
+        if (data.paymentStatus === "failed" || data.paymentStatus === "refunded") {
+          setLoading(false);
+          return;
+        }
+
+        attempt++;
+        if (attempt >= MAX_POLLS) {
+          setLoading(false);
+          return;
+        }
+
+        setTimeout(() => { if (!cancelled) poll(); }, POLL_INTERVAL);
+      } catch (err: unknown) {
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : "Something went wrong.");
-      })
-      .finally(() => setLoading(false));
+        setLoading(false);
+      }
+    }
+
+    poll();
+    return () => { cancelled = true; };
   }, [searchParams]);
+
+  useEffect(() => {
+    if (order?.paymentStatus === "paid" && !bagCleared) {
+      clearBag();
+      setBagCleared(true);
+    }
+  }, [order?.paymentStatus, bagCleared, clearBag]);
 
   // ── Loading ──
   if (loading) {
@@ -163,7 +210,70 @@ function ThankYouContent() {
     );
   }
 
+  const isPaid = order.paymentStatus === "paid";
+  const isFailed = order.paymentStatus === "failed" || order.paymentStatus === "refunded";
+  const isPending = order.paymentStatus === "pending";
   const itemCount = order.items.reduce((s, i) => s + i.qty, 0);
+
+  if (isFailed) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto max-w-2xl px-4 py-16 sm:px-6 text-center">
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 18 }}
+            className="mx-auto mb-6 flex h-22 w-22 items-center justify-center rounded-full bg-white shadow-xl shadow-red-500/15 ring-4 ring-red-100"
+          >
+            <IconCircleX size={40} className="text-red-400" strokeWidth={2} />
+          </motion.div>
+          <h1 className="font-mono text-2xl font-bold text-zinc-900 sm:text-3xl">
+            Payment Failed
+          </h1>
+          <p className="mt-3 text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
+            Your payment was not completed. No amount has been charged.
+            You can try placing the order again from your bag.
+          </p>
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-red-50 border border-red-200 px-4 py-2">
+            <IconHash size={14} className="text-red-400" />
+            <span className="font-mono text-sm font-semibold text-zinc-700 tracking-wide">
+              {order.orderNumber}
+            </span>
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase text-red-600">
+              {order.paymentStatus}
+            </span>
+          </div>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Button asChild size="lg" className="w-full rounded-full font-semibold sm:w-auto">
+              <Link href="/" className="flex items-center gap-2">
+                <IconShoppingBag size={18} />
+                Continue Shopping
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="w-full rounded-full sm:w-auto">
+              <Link href="/orders" className="flex items-center gap-2">
+                <IconPackage size={18} />
+                My Orders
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <IconLoader2 size={32} className="animate-spin text-primary-400" />
+        <p className="font-mono text-sm font-bold text-zinc-700">Confirming your payment...</p>
+        <p className="text-xs text-zinc-500 max-w-xs">
+          We are verifying your payment with the bank. This can take a few moments.
+          Please do not close this page.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -570,11 +680,6 @@ function ThankYouContent() {
 // ── Page export wrapped in Suspense (required for useSearchParams) ─────────────
 
 export default function ThankYouPage() {
-    const { clearBag } = useBag()
-
-  useEffect(() => {
-    clearBag()
-  }, [])
   return (
     <Suspense
       fallback={

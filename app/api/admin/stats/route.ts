@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     [{ activeCoupons }],
     statusBreakdown,
   ] = await Promise.all([
-    db.select({ totalOrders: count() }).from(orders),
+    db.select({ totalOrders: count() }).from(orders).where(eq(orders.paymentStatus, "paid")),
     db.select({ totalRevenue: sum(orders.totalAmount) }).from(orders).where(eq(orders.paymentStatus, "paid")),
     db.select({ totalProducts: count() }).from(products).where(eq(products.isActive, true)),
     db.select({ outOfStock: count() }).from(products).where(and(eq(products.isActive, true), eq(products.stock, 0))),
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       .select({ totalUsers: count() })
       .from(users)
       .where(ne(users.role, "admin")),
-    db.select({ pendingOrders: count() }).from(orders).where(eq(orders.status, "pending")),
+    db.select({ pendingOrders: count() }).from(orders).where(and(eq(orders.status, "pending"), eq(orders.paymentStatus, "paid"))),
     db.select({ processingOrders: count() }).from(orders).where(eq(orders.status, "processing")),
     db.select({ totalContacts: count() }).from(contactSubmissions),
     db.select({ totalGifting: count() }).from(giftingEnquiries),

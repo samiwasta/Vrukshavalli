@@ -108,6 +108,7 @@ export async function POST(req: Request) {
         .update(orders)
         .set({
           paymentStatus: "failed",
+          status: "cancelled",
           paymentId: cfPaymentId,
           cashfreeOrderId: gatewayOrderId,
           gatewayResponse: gatewaySnapshot,
@@ -119,11 +120,17 @@ export async function POST(req: Request) {
 
     if (
       webhookType === "PAYMENT_USER_DROPPED_WEBHOOK" ||
-      paymentStatus === "USER_DROPPED"
+      paymentStatus === "USER_DROPPED" ||
+      paymentStatus === "CANCELLED" ||
+      paymentStatus === "NOT_ATTEMPTED"
     ) {
       await db
         .update(orders)
         .set({
+          paymentStatus: "failed",
+          status: "cancelled",
+          paymentId: cfPaymentId,
+          cashfreeOrderId: gatewayOrderId,
           gatewayResponse: gatewaySnapshot,
           updatedAt: new Date(),
         })
