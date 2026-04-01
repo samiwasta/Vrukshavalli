@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema/orders";
 import { eq, and } from "drizzle-orm";
+import { deductOrderStock } from "@/lib/deduct-order-stock";
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID!;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY!;
@@ -61,9 +62,12 @@ export async function GET(
       const [updated] = await db
         .update(orders)
         .set({ paymentStatus: "paid", status: "processing", paymentId: payment.cf_payment_id, updatedAt: new Date() })
-        .where(eq(orders.id, id))
+        .where(and(eq(orders.id, id), eq(orders.paymentStatus, "pending")))
         .returning();
-      if (updated) order = updated;
+      if (updated) {
+        order = updated;
+        await deductOrderStock(updated.items);
+      }
     } else if (
       payment?.payment_status === "FAILED" ||
       payment?.payment_status === "USER_DROPPED" ||

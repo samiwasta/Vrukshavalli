@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema/orders";
 import { and, eq } from "drizzle-orm";
 import { verifyCashfreeWebhookSignature } from "@/lib/cashfree-webhook-verify";
+import { deductOrderStock } from "@/lib/deduct-order-stock";
 
 const ORDER_ID_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
       webhookType === "PAYMENT_SUCCESS_WEBHOOK" ||
       paymentStatus === "SUCCESS"
     ) {
-      await db
+      const [updated] = await db
         .update(orders)
         .set({
           paymentStatus: "paid",
@@ -96,7 +97,13 @@ export async function POST(req: Request) {
           gatewayResponse: gatewaySnapshot,
           updatedAt: new Date(),
         })
-        .where(eq(orders.id, orderId));
+        .where(and(eq(orders.id, orderId), eq(orders.paymentStatus, "pending")))
+        .returning({ items: orders.items });
+
+      if (updated) {
+        await deductOrderStock(updated.items);
+      }
+
       return NextResponse.json({ ok: true });
     }
 
