@@ -82,7 +82,7 @@ const STATS = [
   { value: "1993", label: "Legacy since" },
   { value: "2017", label: "Vrukshavalli founded" },
   { value: "10,000+", label: "Happy customers" },
-  { value: "33,000+", label: "Online community" },
+  { value: "35k+", label: "Online community" },
 ];
 
 // ── Values ───────────────────────────────────────────────────────────────────
@@ -218,7 +218,7 @@ export default function OurStoryPage() {
               </p>
               <p className="mt-5 text-base sm:text-lg leading-8 text-zinc-700">
                 Today, with a thriving online community of{" "}
-                <span className="font-semibold text-primary-600">33,000+ followers</span> and{" "}
+                <span className="font-semibold text-primary-600">35k+ followers</span> and{" "}
                 <span className="font-semibold text-primary-600">10,000+ happy customers</span>{" "}
                 across India, Vrukshavalli continues to grow —
               </p>
@@ -364,7 +364,7 @@ export default function OurStoryPage() {
                   {
                     year: "Today",
                     title: "A Nation-Wide Movement",
-                    desc: "10,000+ customers and 33,000+ community members growing stronger every day.",
+                    desc: "10,000+ customers and 35k+ community members growing stronger every day.",
                     color: "bg-sky-500",
                     border: "border-sky-200",
                     bg: "bg-sky-50/60",

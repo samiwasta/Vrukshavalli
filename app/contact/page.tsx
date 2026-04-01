@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
 import { useSession } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 // ── Contact Info ─────────────────────────────────────────────────────────────
 const CONTACT_DETAILS = [
@@ -146,28 +147,48 @@ export default function ContactPage() {
     setForm((prev) => ({ ...prev, [key]: v }));
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  const res = await fetch("/api/contact", {
-    method: "POST",
-    body: JSON.stringify({
-      name: form.fullName,
-      email: form.email,
-      phone: form.phone,
-      subject: form.subject,
-      message: form.message,
-    }),
-  });
+    try {
+      const payloadName = isLoggedIn
+        ? (session?.user?.name?.trim() || session?.user?.email?.trim() || "")
+        : form.fullName.trim();
+      const payloadEmail = isLoggedIn
+        ? (session?.user?.email?.trim() || "")
+        : form.email.trim();
 
-  const json = await res.json();
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: payloadName,
+          email: payloadEmail,
+          phone: form.phone.trim(),
+          subject: form.subject.trim(),
+          message: form.message.trim(),
+        }),
+      });
 
-  setLoading(false);
+      const json = await res.json();
 
-  if (json.success) {
-    setSubmitted(true);
-  }
-};
+      if (json.success) {
+        setSubmitted(true);
+      } else {
+        const fieldErrors = json.errors?.fieldErrors as
+          | Record<string, string[]>
+          | undefined;
+        const firstFieldError =
+          fieldErrors &&
+          Object.values(fieldErrors).flat().find((msg) => Boolean(msg));
+        toast.error(firstFieldError ?? json.error ?? "Failed to submit form");
+      }
+    } catch {
+      toast.error("Failed to submit form");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -248,9 +269,7 @@ export default function ContactPage() {
               <h2 className="font-mono text-sm font-bold text-zinc-900 mb-3">Business Hours</h2>
               <div className="flex flex-col gap-1.5 text-sm">
                 {[
-                  { day: "Monday – Friday", time: "9:00 AM – 6:00 PM" },
-                  { day: "Saturday", time: "10:00 AM – 4:00 PM" },
-                  { day: "Sunday", time: "Closed" },
+                  { day: "All Days", time: "9:00 AM – 8:00 PM" },
                 ].map((row) => (
                   <div key={row.day} className="flex justify-between text-zinc-600">
                     <span className="font-medium">{row.day}</span>

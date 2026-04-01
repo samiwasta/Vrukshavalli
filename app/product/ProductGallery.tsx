@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import { IconGift } from "@tabler/icons-react";
 import ProductCard from "@/components/ProductCard";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export const PRODUCT_CATEGORIES = [
   "plants",
@@ -79,6 +82,121 @@ interface ApiProductRow {
   isHandPicked?: boolean;
 }
 
+type GiftingFormData = {
+  fullName: string;
+  phone: string;
+  email: string;
+  company: string;
+  moq: string;
+  deliveryType: "single" | "multiple" | "";
+};
+
+const MOQ_OPTIONS = [
+  "10 – 25 units",
+  "26 – 50 units",
+  "51 – 100 units",
+  "101 – 250 units",
+  "251 – 500 units",
+  "500+ units",
+] as const;
+
+function GiftEnquiryModal({ onClose }: { onClose: () => void }) {
+  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<GiftingFormData>({
+    fullName: "",
+    phone: "",
+    email: "",
+    company: "",
+    moq: "",
+    deliveryType: "",
+  });
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/gifting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const json = await res.json();
+      if (json.success) setSubmitted(true);
+      else toast.error(json.error ?? "Failed to submit enquiry");
+    } catch {
+      toast.error("Failed to submit enquiry");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-70 flex items-end justify-end bg-black/40 p-4 backdrop-blur-sm sm:items-center sm:justify-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 40, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 40, scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {submitted ? (
+          <div className="py-10 text-center">
+            <h3 className="font-mono text-xl font-semibold text-zinc-900">Enquiry Submitted</h3>
+            <p className="mt-2 text-sm text-zinc-500">Our gifting team will contact you shortly.</p>
+            <Button onClick={onClose} className="mt-6 rounded-full px-8">Close</Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <h3 className="font-mono text-lg font-semibold text-zinc-900">Gift Enquiry</h3>
+            <input name="fullName" required placeholder="Full Name" value={formData.fullName} onChange={handleChange} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm" />
+            <input name="phone" required placeholder="Phone Number" value={formData.phone} onChange={handleChange} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm" />
+            <input name="email" type="email" required placeholder="Email Address" value={formData.email} onChange={handleChange} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm" />
+            <input name="company" required placeholder="Company Name" value={formData.company} onChange={handleChange} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm" />
+            <select name="moq" required value={formData.moq} onChange={handleChange} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm">
+              <option value="" disabled>Minimum Order Quantity</option>
+              {MOQ_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+            <div className="flex gap-2">
+              {(["single", "multiple"] as const).map((type) => (
+                <label key={type} className="flex flex-1 items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm">
+                  <input type="radio" name="deliveryType" value={type} checked={formData.deliveryType === type} onChange={handleChange} />
+                  {type === "single" ? "Single Location" : "Multiple Locations"}
+                </label>
+              ))}
+            </div>
+            <Button type="submit" disabled={isSubmitting || !formData.moq || !formData.deliveryType} className="h-11 w-full rounded-xl text-sm font-semibold">
+              {isSubmitting ? "Sending…" : "Submit Gift Enquiry"}
+            </Button>
+          </form>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function ProductGallery() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
@@ -141,6 +259,7 @@ export default function ProductGallery() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [giftModalOpen, setGiftModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -267,6 +386,32 @@ export default function ProductGallery() {
           </div>
         )}
       </div>
+
+      {categoryForApi === "gifting" && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 340, damping: 26 }}
+          className="fixed bottom-6 right-24 z-60 sm:right-24"
+        >
+          <Button
+            size="lg"
+            onClick={() => setGiftModalOpen(true)}
+            className="group flex items-center gap-2 rounded-full pl-5 pr-6 shadow-xl shadow-primary-600/30 hover:shadow-primary-600/40"
+          >
+            <motion.span
+              animate={{ rotate: [0, -12, 12, -8, 0] }}
+              transition={{ repeat: Infinity, repeatDelay: 3, duration: 0.6 }}
+            >
+              <IconGift size={20} />
+            </motion.span>
+            <span className="text-sm font-semibold">Gift Enquiry</span>
+          </Button>
+        </motion.div>
+      )}
+      <AnimatePresence>
+        {giftModalOpen && <GiftEnquiryModal onClose={() => setGiftModalOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

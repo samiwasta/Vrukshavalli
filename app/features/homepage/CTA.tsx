@@ -157,7 +157,11 @@ export default function CommunityCTA() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <Link href="/community">
+            <Link
+              href="https://chat.whatsapp.com/B94rnNPydqmFMi49Wgz7Vd?mode=gi_t"
+              target="_blank"
+              rel="noreferrer"
+            >
               <Button
                 size="lg"
                 className="rounded-full px-8 py-6 text-base sm:text-lg font-semibold bg-white text-primary-700 hover:bg-white/90 shadow-lg hover:shadow-xl transition-all"

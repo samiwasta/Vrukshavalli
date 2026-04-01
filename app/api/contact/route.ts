@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { contactSubmissions } from "@/lib/db/schema";
 import { z } from "zod";
-import { count, gte } from "drizzle-orm";
+import { and, count, eq, gte } from "drizzle-orm";
 
 const bodySchema = z.object({
   name: z.string().min(2),
@@ -26,7 +26,10 @@ export async function POST(request: Request) {
     }
 
     const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip")?.trim() ||
+      request.headers.get("cf-connecting-ip")?.trim() ||
+      "unknown";
 
     // ⛔ Rate limit → 5 per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -35,7 +38,10 @@ export async function POST(request: Request) {
       .select({ value: count() })
       .from(contactSubmissions)
       .where(
-        gte(contactSubmissions.createdAt, oneHourAgo)
+        and(
+          gte(contactSubmissions.createdAt, oneHourAgo),
+          eq(contactSubmissions.ip, ip),
+        )
       );
 
     if (value >= 5) {

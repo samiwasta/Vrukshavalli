@@ -68,13 +68,17 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ch
 
 function fmt(n: number) { return n.toLocaleString("en-IN"); }
 
-function relativeTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+function formatIstDateTime(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function AdminOverviewPage() {
@@ -89,6 +93,7 @@ export default function AdminOverviewPage() {
   }, []);
 
   const today = new Date().toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
@@ -328,7 +333,7 @@ export default function AdminOverviewPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-semibold text-stone-800">₹{fmt(Number(order.totalAmount))}</p>
-                      <p className="text-xs text-stone-400">{relativeTime(order.createdAt)}</p>
+                      <p className="text-xs text-stone-400">{formatIstDateTime(order.createdAt)} IST</p>
                     </div>
                   </div>
                 );

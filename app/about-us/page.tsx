@@ -94,7 +94,7 @@ function SectionHeading({
 const STATS = [
   { value: "2017", label: "Founded" },
   { value: "10,000+", label: "Happy customers" },
-  { value: "33,000+", label: "Online community" },
+  { value: "35k+", label: "Online community" },
   { value: "1993", label: "Nursery legacy since" },
 ];
 
@@ -192,7 +192,7 @@ const WHY_US = [
   {
     icon: IconUsers,
     title: "Community First",
-    desc: "A thriving community of 33,000+ plant lovers across India who share, inspire, and grow together.",
+    desc: "A thriving community of 35k+ plant lovers across India who share, inspire, and grow together.",
   },
   {
     icon: IconHeart,

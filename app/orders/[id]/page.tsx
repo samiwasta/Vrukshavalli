@@ -463,7 +463,7 @@ export default function OrderTrackingPage({
                       <Link href="/contact" className="font-semibold text-primary-600 hover:underline">
                         Contact support
                       </Link>{" "}
-                      — Mon–Sat, 9 AM to 6 PM.
+                      — all days, 9 AM to 8 PM.
                     </p>
                     <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-sky-100/70 px-2.5 py-1 text-[11px] font-mono font-semibold text-sky-700">
                       <IconHash size={11} />
