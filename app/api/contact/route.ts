@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { contactSubmissions } from "@/lib/db/schema";
+import {
+  formSubmissionCountInWindow,
+  getClientIp,
+  isFormRateLimited,
+} from "@/lib/form-submission-rate-limit";
 import { z } from "zod";
-import { and, count, eq, gte } from "drizzle-orm";
 
 const bodySchema = z.object({
   name: z.string().min(2),
@@ -25,26 +29,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip")?.trim() ||
-      request.headers.get("cf-connecting-ip")?.trim() ||
-      "unknown";
+    const ip = getClientIp(request);
 
-    // ⛔ Rate limit → 5 per hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-
-    const [{ value }] = await db
-      .select({ value: count() })
-      .from(contactSubmissions)
-      .where(
-        and(
-          gte(contactSubmissions.createdAt, oneHourAgo),
-          eq(contactSubmissions.ip, ip),
-        )
-      );
-
-    if (value >= 5) {
+    const recent = await formSubmissionCountInWindow(contactSubmissions, ip);
+    if (isFormRateLimited(recent)) {
       return NextResponse.json(
         { success: false, error: "Too many requests" },
         { status: 429 }

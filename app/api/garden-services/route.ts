@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { gardenServiceEnquiries } from "@/lib/db/schema/garden-service-enquiries";
+import {
+  formSubmissionCountInWindow,
+  getClientIp,
+  isFormRateLimited,
+} from "@/lib/form-submission-rate-limit";
 import { z } from "zod";
-import { and, count, eq, gte } from "drizzle-orm";
 
 const serviceIdSchema = z.enum([
   "landscaping",
@@ -31,21 +35,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
-
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const [{ value }] = await db
-      .select({ value: count() })
-      .from(gardenServiceEnquiries)
-      .where(
-        and(
-          gte(gardenServiceEnquiries.createdAt, oneHourAgo),
-          eq(gardenServiceEnquiries.ip, ip)
-        )
-      );
-
-    if (value >= 5) {
+    const ip = getClientIp(request);
+    const recent = await formSubmissionCountInWindow(gardenServiceEnquiries, ip);
+    if (isFormRateLimited(recent)) {
       return NextResponse.json(
         { success: false, error: "Too many requests" },
         { status: 429 }

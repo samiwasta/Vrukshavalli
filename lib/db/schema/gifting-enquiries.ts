@@ -12,6 +12,8 @@ export const giftingEnquiries = pgTable("gifting_enquiries", {
   moq: text("moq").notNull(),
   deliveryType: text("delivery_type").notNull(),
 
+  ip: text("ip"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

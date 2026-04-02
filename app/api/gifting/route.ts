@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { giftingEnquiries } from "@/lib/db/schema";
+import {
+  formSubmissionCountInWindow,
+  getClientIp,
+  isFormRateLimited,
+} from "@/lib/form-submission-rate-limit";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -25,7 +30,16 @@ export async function POST(request: Request) {
       );
     }
 
-    await db.insert(giftingEnquiries).values(parsed.data);
+    const ip = getClientIp(request);
+    const recent = await formSubmissionCountInWindow(giftingEnquiries, ip);
+    if (isFormRateLimited(recent)) {
+      return NextResponse.json(
+        { success: false, error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
+    await db.insert(giftingEnquiries).values({ ...parsed.data, ip });
 
     return NextResponse.json({ success: true });
   } catch (error) {
