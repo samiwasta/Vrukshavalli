@@ -65,8 +65,6 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
 
       return [...prev, item];
     });
-
-    setIsBagOpen(true);
   };
 
   const removeItem = (id: string) =>

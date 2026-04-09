@@ -25,6 +25,8 @@ export interface ProductCardProps {
   isNew?: boolean;
   isBestSeller?: boolean;
   isHandPicked?: boolean;
+  /** Stacked actions, tighter padding — for narrow horizontal strips */
+  compact?: boolean;
   className?: string;
 }
 
@@ -43,6 +45,7 @@ export default function ProductCard({
   isNew,
   isBestSeller,
   isHandPicked,
+  compact = false,
   className,
 }: ProductCardProps) {
   const wishlist = useWishlist();
@@ -172,15 +175,31 @@ export default function ProductCard({
         {/* BADGES unchanged */}
       </div>
 
-      {/* CONTENT unchanged */}
-      <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 md:p-5">
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          compact ? "p-2.5 pb-3" : "p-3 sm:p-4 md:p-5",
+        )}
+      >
         {category && (
-          <span className="mb-1 text-[10px] font-semibold text-primary-600 uppercase tracking-wider sm:mb-1.5 sm:text-[10px]">
+          <span
+            className={cn(
+              "mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary-600",
+              compact && "line-clamp-1",
+            )}
+          >
             {category}
           </span>
         )}
 
-        <h3 className="mb-2 line-clamp-2 min-h-[2.5em] text-sm font-semibold leading-tight text-foreground transition-colors duration-300 group-hover:text-primary-700 sm:min-h-[2.25em] sm:mb-3 sm:text-base md:min-h-[2em]">
+        <h3
+          className={cn(
+            "mb-2 text-sm font-semibold leading-snug text-foreground transition-colors duration-300 group-hover:text-primary-700 sm:text-base",
+            compact
+              ? "line-clamp-3 min-h-15"
+              : "line-clamp-2 min-h-[2.5em] sm:mb-3 sm:min-h-[2.25em] md:min-h-[2em]",
+          )}
+        >
           {name}
         </h3>
 
@@ -207,9 +226,18 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Price */}
-        <div className="mb-3 flex items-baseline gap-2">
-          <span className="text-base font-bold text-primary-700 sm:text-lg">
+        <div
+          className={cn(
+            "mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5",
+            compact && "mb-2.5",
+          )}
+        >
+          <span
+            className={cn(
+              "font-bold text-primary-700",
+              compact ? "text-sm" : "text-base sm:text-lg",
+            )}
+          >
             ₹{price.toLocaleString("en-IN")}
           </span>
           {originalPrice && originalPrice > price && (
@@ -217,19 +245,19 @@ export default function ProductCard({
               <span className="text-xs text-muted-foreground line-through sm:text-sm">
                 ₹{originalPrice.toLocaleString("en-IN")}
               </span>
-              <span className="text-xs font-semibold text-green-600">
+              <span className="text-[11px] font-semibold text-green-600 sm:text-xs">
                 {discount}% off
               </span>
             </>
           )}
         </div>
 
-        <div className="flex flex-col gap-2 xl:flex-row">
-          <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Link href={detailHref} className="block w-full">
+        <div className="mt-auto flex min-w-0 flex-col gap-2">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Link href={detailHref} className="block w-full min-w-0">
               <Button
                 variant="outline"
-                className="w-full rounded-full font-semibold border-2 border-primary-600 text-primary-600 hover:bg-primary-50 text-xs sm:text-sm"
+                className="h-auto min-h-9 w-full whitespace-normal rounded-full border-2 border-primary-600 px-3 py-2 text-center text-xs font-semibold leading-tight text-primary-600 hover:bg-primary-50 sm:text-sm"
                 size="sm"
               >
                 View Details
@@ -237,13 +265,13 @@ export default function ProductCard({
             </Link>
           </motion.div>
 
-          <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
-                onClick={handleAddToBag}
-                className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300 border-2 border-primary-600 hover:border-primary-700 text-xs sm:text-sm"
-                size="sm"
+              onClick={handleAddToBag}
+              className="h-auto min-h-9 w-full min-w-0 whitespace-normal rounded-full border-2 border-primary-600 bg-primary-600 px-3 py-2 text-center text-xs font-semibold leading-tight text-white shadow-md transition-all duration-300 hover:border-primary-700 hover:bg-primary-700 hover:shadow-lg sm:text-sm"
+              size="sm"
             >
-            Add to Bag
+              Add to Bag
             </Button>
           </motion.div>
         </div>

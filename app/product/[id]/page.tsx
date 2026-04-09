@@ -20,6 +20,7 @@ import {
   IconDroplet,
   IconRuler,
   IconPaw,
+  IconSparkles,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import type { ApiProductListRow } from "@/lib/api-product-list-row";
@@ -54,8 +55,8 @@ interface Product {
   water: string;
   size: string;
   petFriendly: boolean;
-  subCategory?: "indoor" | "outdoor" | "exotic";
-  sizesAvailable?: string[];
+  plantType: "indoor" | "outdoor" | null;
+  potSizes: string[];
 }
 
 // ── Star Rating ──────────────────────────────────────────────────────────────
@@ -81,6 +82,23 @@ const CARE_COLORS: Record<Product["careLevel"], string> = {
   Moderate: "bg-warningLight text-warningDark",
   Expert: "bg-errorLight text-errorDark",
 };
+
+function formatSizeSpec(
+  sizeDetail: string | null | undefined,
+  potSizes: string[] | null | undefined,
+): string {
+  const detail = sizeDetail?.trim();
+  if (detail) return detail;
+  const pots = potSizes?.filter(Boolean) ?? [];
+  if (pots.length === 0) return "—";
+  return pots.join(", ");
+}
+
+function potSizeCmHint(potLabel: string): string | null {
+  if (potLabel === '4"') return "~10 cm";
+  if (potLabel === '6"') return "~15 cm";
+  return null;
+}
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function ProductDetailPage() {
@@ -126,6 +144,14 @@ export default function ProductDetailPage() {
                 ? [p.image]
                 : [];
 
+          const potSizes = Array.isArray(p.potSizes)
+            ? p.potSizes
+            : [];
+          const plantType =
+            p.plantType === "indoor" || p.plantType === "outdoor"
+              ? p.plantType
+              : null;
+
           setProduct({
             ...p,
             category: p.category?.name ?? "",
@@ -139,11 +165,16 @@ export default function ProductDetailPage() {
             stock: Number(p.stock ?? 0),
             stockCapacity: p.stockCapacity ?? null,
             images: gallery,
-            careLevel: p.careLevel ?? "Easy",
-            light: p.light ?? "—",
-            water: p.water ?? "—",
-            size: p.size ?? "—",
+            careLevel:
+              p.careLevel === "Moderate" || p.careLevel === "Expert"
+                ? p.careLevel
+                : "Easy",
+            light: p.light?.trim() || "—",
+            water: p.water?.trim() || "—",
+            size: formatSizeSpec(p.sizeDetail, potSizes),
             petFriendly: Boolean(p.petFriendly),
+            plantType,
+            potSizes,
           });
         } else {
           setProduct(null);
@@ -439,9 +470,18 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Name */}
-            <h1 className="font-mono text-2xl font-bold leading-tight text-zinc-900 sm:text-3xl lg:text-4xl">
-              {product.name}
-            </h1>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <h1 className="font-mono text-2xl font-bold leading-tight text-zinc-900 sm:text-3xl lg:text-4xl">
+                {product.name}
+              </h1>
+              {product.plantType && (
+                <span className="w-fit rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700">
+                  {product.plantType === "indoor"
+                    ? "Indoor plant"
+                    : "Outdoor plant"}
+                </span>
+              )}
+            </div>
 
             {/* Rating Row */}
             <div className="flex flex-wrap items-center gap-3">
@@ -484,9 +524,12 @@ export default function ProductDetailPage() {
               {product.description}
             </p>
 
-            {/* Size Selector — indoor plants only */}
+            {/* Pot size selector — indoor / outdoor when pot sizes configured */}
             <AnimatePresence>
-              {product.subCategory === "indoor" && product.sizesAvailable && (
+              {(product.plantType === "indoor" ||
+                product.plantType === "outdoor") &&
+                product.potSizes &&
+                product.potSizes.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -508,8 +551,8 @@ export default function ProductDetailPage() {
                       </motion.span>
                     )}
                   </div>
-                  <div className="flex gap-3">
-                    {product.sizesAvailable.map((s) => (
+                  <div className="flex flex-wrap gap-3">
+                    {product.potSizes.map((s) => (
                       <motion.button
                         key={s}
                         whileTap={{ scale: 0.93 }}
@@ -524,6 +567,7 @@ export default function ProductDetailPage() {
                         )}
                       >
                         <span className="text-base font-bold">{s}</span>
+                        {potSizeCmHint(s) && (
                         <span
                           className={cn(
                             "text-[10px] font-medium",
@@ -532,8 +576,9 @@ export default function ProductDetailPage() {
                               : "text-zinc-400",
                           )}
                         >
-                          {s === '4"' ? "~10 cm" : "~15 cm"}
+                          {potSizeCmHint(s)}
                         </span>
+                        )}
                         {selectedSize === s && (
                           <motion.span
                             layoutId="sizeCheck"
@@ -773,6 +818,40 @@ export default function ProductDetailPage() {
 }
 
 // ── Related Products ─────────────────────────────────────────────────────────
+type RelatedCardProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  rating: number;
+  reviewCount: number;
+  category?: string;
+  stock: number;
+  stockCapacity: number | null;
+  isNew?: boolean;
+  isBestSeller?: boolean;
+};
+
+function mapListRow(p: ApiProductListRow): RelatedCardProduct {
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    price: Number(p.price),
+    originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+    image: p.image,
+    rating: Number(p.rating ?? 0),
+    reviewCount: Number(p.reviewCount ?? 0),
+    category: p.category?.name,
+    stock: Number(p.stock ?? 0),
+    stockCapacity: p.stockCapacity ?? null,
+    isNew: p.isNew,
+    isBestSeller: p.isBestSeller,
+  };
+}
+
 function RelatedProducts({
   categorySlug,
   currentId,
@@ -780,79 +859,107 @@ function RelatedProducts({
   categorySlug: string;
   currentId: string;
 }) {
-  const [products, setProducts] = useState<
-    {
-      id: string;
-      slug: string;
-      name: string;
-      price: number;
-      originalPrice?: number;
-      image: string;
-      rating: number;
-      reviewCount: number;
-      category?: string;
-      stock: number;
-      stockCapacity: number | null;
-      isNew?: boolean;
-      isBestSeller?: boolean;
-    }[]
-  >([]);
+  const [products, setProducts] = useState<RelatedCardProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchRelated = async () => {
+      setLoading(true);
       try {
-        const res = await fetch(
-          `/api/products?category=${categorySlug}&limit=5`
-        );
-        const json = await res.json();
+        const seen = new Set<string>([currentId]);
+        const merged: RelatedCardProduct[] = [];
 
-        if (json.success) {
-          const rows = json.data as ApiProductListRow[];
-          const filtered = rows
-            .filter((p) => p.id !== currentId)
-            .slice(0, 4)
-            .map((p) => ({
-              id: p.id,
-              slug: p.slug,
-              name: p.name,
-              price: Number(p.price),
-              originalPrice: p.originalPrice
-                ? Number(p.originalPrice)
-                : undefined,
-              image: p.image,
-              rating: Number(p.rating ?? 0),
-              reviewCount: Number(p.reviewCount ?? 0),
-              category: p.category?.name,
-              stock: Number(p.stock ?? 0),
-              stockCapacity: p.stockCapacity ?? null,
-              isNew: p.isNew,
-              isBestSeller: p.isBestSeller,
-            }));
-
-          setProducts(filtered);
+        if (categorySlug) {
+          const res = await fetch(
+            `/api/products?category=${encodeURIComponent(categorySlug)}&limit=16`,
+          );
+          const json = await res.json();
+          if (json.success && !cancelled) {
+            const rows = json.data as ApiProductListRow[];
+            for (const row of rows) {
+              if (seen.has(row.id)) continue;
+              seen.add(row.id);
+              merged.push(mapListRow(row));
+              if (merged.length >= 8) break;
+            }
+          }
         }
+
+        if (merged.length < 6 && !cancelled) {
+          const res = await fetch("/api/products?limit=24&isBestSeller=true");
+          const json = await res.json();
+          if (json.success && !cancelled) {
+            const rows = json.data as ApiProductListRow[];
+            for (const row of rows) {
+              if (seen.has(row.id)) continue;
+              seen.add(row.id);
+              merged.push(mapListRow(row));
+              if (merged.length >= 10) break;
+            }
+          }
+        }
+
+        if (!cancelled) setProducts(merged);
       } catch (err) {
         console.error("Related products error", err);
+        if (!cancelled) setProducts([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    if (categorySlug) fetchRelated();
+    void fetchRelated();
+    return () => {
+      cancelled = true;
+    };
   }, [categorySlug, currentId]);
 
-  if (loading || products.length === 0) return null;
+  if (loading) {
+    return (
+      <section className="mt-12 sm:mt-16">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="h-6 w-6 animate-pulse rounded-md bg-zinc-200" />
+          <div className="h-7 w-48 animate-pulse rounded-md bg-zinc-200 sm:w-56" />
+        </div>
+        <div className="flex gap-3 overflow-hidden pb-1">
+          {[0, 1, 2, 3].map((k) => (
+            <div
+              key={k}
+              className="h-72 w-[min(240px,78vw)] shrink-0 animate-pulse rounded-3xl bg-zinc-100 sm:w-[260px]"
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (products.length === 0) return null;
 
   return (
-    <section className="mt-16">
-      <h2 className="mb-6 font-mono text-xl font-bold text-zinc-900 sm:text-2xl">
-        You May Also Like
-      </h2>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {products.map((p) => (
-          <ProductCard key={p.id} {...p} slug={p.slug} />
-        ))}
+    <section className="mt-12 sm:mt-16">
+      <div className="mb-4 flex items-center gap-2 sm:mb-5">
+        <IconSparkles
+          size={22}
+          stroke={1.5}
+          className="shrink-0 text-primary-600"
+        />
+        <h2 className="font-mono text-xl font-bold text-zinc-900 sm:text-2xl">
+          You may also like
+        </h2>
+      </div>
+      <div className="-mx-1 border-t border-zinc-100 bg-linear-to-b from-primary-50/40 to-transparent px-1 py-4 sm:rounded-2xl sm:border sm:px-3">
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] sm:gap-4">
+          {products.map((p) => (
+            <div
+              key={p.id}
+              className="w-[min(240px,78vw)] shrink-0 snap-start sm:w-[260px]"
+            >
+              <ProductCard {...p} slug={p.slug} compact className="h-full" />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

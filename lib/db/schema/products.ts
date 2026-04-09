@@ -29,9 +29,15 @@ export const products = pgTable("products", {
   isHandPicked: boolean("is_hand_picked").default(false),
   isCeramicFeatured: boolean("is_ceramic_featured").default(false),
   isActive: boolean("is_active").default(true).notNull(),
+  plantType: text("plant_type"),
+  potSizes: text("pot_sizes").array(),
+  light: text("light"),
+  water: text("water"),
+  sizeDetail: text("size_detail"),
+  petFriendly: boolean("pet_friendly").default(false),
+  careLevel: text("care_level").default("Easy"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  
 },
 (table) => ({
     nameIdx: index("products_name_idx").on(table.name),
@@ -49,6 +55,16 @@ export const insertProductSchema = createInsertSchema(products, {
   price: decimalFromApi,
   originalPrice: z.union([decimalFromApi, z.null()]).optional(),
   rating: z.union([decimalFromApi, z.null()]).optional(),
+  plantType: z.preprocess(
+    (v) => (v === "" || v === undefined ? null : v),
+    z.enum(["indoor", "outdoor"]).nullable().optional(),
+  ),
+  potSizes: z.array(z.string()).nullable().optional(),
+  light: z.string().nullable().optional(),
+  water: z.string().nullable().optional(),
+  sizeDetail: z.string().nullable().optional(),
+  petFriendly: z.boolean().optional(),
+  careLevel: z.string().nullable().optional(),
 });
 export const selectProductSchema = createSelectSchema(products);
 

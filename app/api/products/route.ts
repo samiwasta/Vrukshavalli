@@ -64,6 +64,7 @@ export async function GET(request: Request) {
     const isBestSeller = searchParams.get("isBestSeller");
     const isHandPicked = searchParams.get("isHandPicked");
     const isCeramicFeatured = searchParams.get("isCeramicFeatured");
+    const plantTypeParam = searchParams.get("plantType");
 
     const conditions = [];
 
@@ -105,6 +106,10 @@ export async function GET(request: Request) {
       conditions.push(eq(products.isHandPicked, true));
     if (isCeramicFeatured === "true")
       conditions.push(eq(products.isCeramicFeatured, true));
+
+    if (plantTypeParam === "indoor" || plantTypeParam === "outdoor") {
+      conditions.push(eq(products.plantType, plantTypeParam));
+    }
 
     // price range
     if (priceMin) conditions.push(gte(products.price, priceMin));

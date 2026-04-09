@@ -17,6 +17,7 @@ import {
   IconCopy,
   IconTruck,
   IconUserCircle,
+  IconSparkles,
 } from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,9 +30,11 @@ import {
 } from "./useDeliveryAddress";
 import type { BagStockRow } from "@/lib/validate-order-stock";
 import { getStockLevel } from "@/lib/stock";
+import type { ApiProductListRow } from "@/lib/api-product-list-row";
 
 export default function BagSlider() {
-  const { isBagOpen, closeBag, items, removeItem, updateQty } = useBag();
+  const { isBagOpen, closeBag, items, removeItem, updateQty, addItem } =
+    useBag();
   const [stockCheck, setStockCheck] = useState<{
     loading: boolean;
     canCheckout: boolean;
@@ -75,6 +78,18 @@ export default function BagSlider() {
   const [couponsLoading, setCouponsLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+  const [recommendedProducts, setRecommendedProducts] = useState<
+    {
+      id: string;
+      slug: string;
+      name: string;
+      price: number;
+      image: string;
+      stock: number;
+    }[]
+  >([]);
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
+
   const fetchAvailableCoupons = async () => {
     if (availableCoupons.length > 0) return; // already loaded
     try {
@@ -94,6 +109,37 @@ export default function BagSlider() {
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
   };
+
+  useEffect(() => {
+    if (!isBagOpen) return;
+    let cancelled = false;
+    setRecommendedLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/products?limit=20&isBestSeller=true");
+        const json = await res.json();
+        if (!json.success || cancelled) return;
+        const rows = json.data as ApiProductListRow[];
+        setRecommendedProducts(
+          rows.map((p) => ({
+            id: p.id,
+            slug: p.slug,
+            name: p.name,
+            price: Number(p.price),
+            image: p.image,
+            stock: Number(p.stock ?? 0),
+          })),
+        );
+      } catch {
+        if (!cancelled) setRecommendedProducts([]);
+      } finally {
+        if (!cancelled) setRecommendedLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isBagOpen]);
 
   const handleApplyCouponFromList = (code: string) => {
     setCouponCode(code);
@@ -136,6 +182,11 @@ export default function BagSlider() {
   const shippingAmount =
     taxableAmount > 0 ? (taxableAmount >= 999 ? 0 : 79) : 0;
   const finalTotal = taxableAmount + taxAmount + shippingAmount;
+
+  const bagProductIds = new Set(items.map((i) => i.id));
+  const recommendedFiltered = recommendedProducts
+    .filter((p) => !bagProductIds.has(p.id))
+    .slice(0, 10);
 
   const applyCoupon = async (overrideCode?: string) => {
   if (items.length === 0) {
@@ -335,6 +386,77 @@ export default function BagSlider() {
   }
 };
 
+  const recommendationsStrip =
+    recommendedLoading || recommendedFiltered.length > 0 ? (
+      <div className="border-t border-zinc-100 bg-linear-to-b from-primary-50/30 to-transparent px-4 py-3">
+        <div className="mb-2 flex items-center gap-1.5">
+          <IconSparkles size={13} className="text-primary-600" stroke={1.5} />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            You may also like
+          </span>
+        </div>
+        {recommendedLoading && recommendedFiltered.length === 0 ? (
+          <div className="flex gap-2">
+            {[0, 1, 2].map((k) => (
+              <div
+                key={k}
+                className="h-[152px] w-[128px] shrink-0 animate-pulse rounded-xl bg-zinc-200/70"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="-mx-1 flex gap-2 overflow-x-auto overscroll-x-contain px-1 pb-0.5 [scrollbar-width:thin]">
+            {recommendedFiltered.map((p) => (
+              <div
+                key={p.id}
+                className="flex w-[128px] shrink-0 flex-col overflow-hidden rounded-xl border border-zinc-100 bg-white shadow-sm"
+              >
+                <Link
+                  href={`/product/${p.slug}`}
+                  onClick={closeBag}
+                  className="relative aspect-square bg-zinc-50"
+                >
+                  <Image
+                    src={p.image}
+                    alt={p.name}
+                    fill
+                    className="object-cover"
+                    sizes="128px"
+                  />
+                </Link>
+                <div className="flex flex-1 flex-col p-2">
+                  <p className="line-clamp-2 min-h-8 text-[11px] font-semibold leading-tight text-zinc-900">
+                    {p.name}
+                  </p>
+                  <p className="mt-1 font-mono text-xs font-bold text-primary-700">
+                    ₹{p.price.toLocaleString("en-IN")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addItem({
+                        id: p.id,
+                        name: p.name,
+                        price: p.price,
+                        image: p.image,
+                        quantity: 1,
+                        slug: p.slug,
+                        stock: p.stock,
+                      })
+                    }
+                    disabled={p.stock <= 0}
+                    className="mt-1.5 w-full rounded-full bg-primary-600 py-1.5 text-[10px] font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400"
+                  >
+                    {p.stock <= 0 ? "Out of stock" : "Add"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ) : null;
+
   return (
     <AnimatePresence>
       {isBagOpen && (
@@ -358,7 +480,7 @@ export default function BagSlider() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 38 }}
-            className="fixed inset-y-0 right-0 z-90 flex w-[min(420px,92vw)] flex-col bg-white shadow-2xl"
+            className="fixed inset-y-0 right-0 z-90 flex max-h-dvh min-h-0 w-[min(440px,94vw)] flex-col bg-white shadow-2xl"
             aria-label="Shopping bag"
           >
             {/* ── Header ───────────────────────────────────────────────── */}
@@ -393,452 +515,541 @@ export default function BagSlider() {
               </button>
             </div>
 
-            {/* ── Body ─────────────────────────────────────────────────── */}
-            {items.length === 0 ? (
-              /* Empty state */
-              <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-                <motion.div
-                  initial={{ scale: 0.85, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{
-                    delay: 0.1,
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 24,
-                  }}
-                  className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary-100"
-                >
-                  <IconLeaf size={36} className="text-primary-500" />
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.18 }}
-                >
-                  <p className="font-mono text-lg font-bold text-zinc-900">
-                    Your bag is empty
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Looks like you haven&apos;t added any plants yet.
-                  </p>
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.24 }}
-                >
-                  <Link
-                    href="/product"
-                    onClick={closeBag}
-                    className="mt-2 inline-flex items-center rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary-600/20 transition-colors hover:bg-primary-700 active:bg-primary-800"
-                  >
-                    Shop Plants
-                  </Link>
-                </motion.div>
-              </div>
-            ) : (
-              /* Product list */
-              <ul className="flex-1 overflow-y-auto divide-y divide-zinc-100 px-4 py-2">
-                <AnimatePresence initial={false}>
-                  {items.map((item, idx) => {
-                    const row = stockCheck.rows[idx];
-                    return (
-                    <motion.li
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, x: 30 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 30, height: 0, marginBlock: 0 }}
-                      transition={{
-                        layout: { type: "spring", stiffness: 380, damping: 36 },
-                        opacity: { duration: 0.18 },
-                        delay: idx * 0.04,
-                      }}
-                      className="flex gap-3 py-4"
-                    >
-                      {/* Thumbnail */}
-                      <Link
-                        href={`/product/${item.slug ?? item.id}`}
-                        onClick={closeBag}
-                        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50"
+            {/* Body: scroll + sticky checkout */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {items.length === 0 ? (
+                <>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <div className="flex flex-col items-center gap-4 px-6 py-8 text-center">
+                      <motion.div
+                        initial={{ scale: 0.85, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{
+                          delay: 0.1,
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 24,
+                        }}
+                        className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary-100"
                       >
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
+                        <IconLeaf size={36} className="text-primary-500" />
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.18 }}
+                      >
+                        <p className="font-mono text-lg font-bold text-zinc-900">
+                          Your bag is empty
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-500">
+                          Looks like you haven&apos;t added any plants yet.
+                        </p>
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.24 }}
+                      >
+                        <Link
+                          href="/product"
+                          onClick={closeBag}
+                          className="mt-1 inline-flex items-center rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary-600/20 transition-colors hover:bg-primary-700 active:bg-primary-800"
+                        >
+                          Shop Plants
+                        </Link>
+                      </motion.div>
+                    </div>
+                    {recommendationsStrip}
+                  </div>
+                  {isSignedIn && (
+                    <div className="shrink-0 border-t border-primary-100 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+                      <Link
+                        href="/product"
+                        onClick={closeBag}
+                        className="flex w-full items-center justify-center rounded-full border border-primary-200 py-2.5 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50"
+                      >
+                        Browse all plants
                       </Link>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <div className="px-4 pt-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        In your bag
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-500">
+                        {totalQty} {totalQty === 1 ? "item" : "items"}
+                      </p>
+                    </div>
+                    <ul className="divide-y divide-zinc-100 px-4">
+                      <AnimatePresence initial={false}>
+                        {items.map((item, idx) => {
+                          const row = stockCheck.rows[idx];
+                          return (
+                            <motion.li
+                              key={item.id}
+                              layout
+                              initial={{ opacity: 0, x: 30 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{
+                                opacity: 0,
+                                x: 30,
+                                height: 0,
+                                marginBlock: 0,
+                              }}
+                              transition={{
+                                layout: {
+                                  type: "spring",
+                                  stiffness: 380,
+                                  damping: 36,
+                                },
+                                opacity: { duration: 0.18 },
+                                delay: idx * 0.04,
+                              }}
+                              className="flex gap-3 py-3.5 first:pt-2"
+                            >
+                              <Link
+                                href={`/product/${item.slug ?? item.id}`}
+                                onClick={closeBag}
+                                className="relative h-18 w-18 shrink-0 overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50"
+                              >
+                                <Image
+                                  src={item.image}
+                                  alt={item.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="72px"
+                                />
+                              </Link>
 
-                      {/* Info */}
-                      <div className="flex flex-1 flex-col justify-between gap-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-zinc-900 leading-tight">
-                              {item.name}
-                            </p>
-                            {item.variant && (
-                              <p className="mt-0.5 text-[11px] text-zinc-400">
-                                {item.variant}
+                              <div className="flex min-w-0 flex-1 flex-col justify-between gap-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold leading-tight text-zinc-900">
+                                      {item.name}
+                                    </p>
+                                    {item.variant && (
+                                      <p className="mt-0.5 text-[11px] text-zinc-400">
+                                        {item.variant}
+                                      </p>
+                                    )}
+                                    {(() => {
+                                      if (stockCheck.loading || !row)
+                                        return null;
+                                      if (!row.canCheckout && row.reason) {
+                                        return (
+                                          <p className="mt-1 text-[11px] font-medium text-red-600">
+                                            {row.reason}
+                                          </p>
+                                        );
+                                      }
+                                      if (
+                                        row.canCheckout &&
+                                        getStockLevel(
+                                          row.stock,
+                                          row.stockCapacity,
+                                        ) === "few"
+                                      ) {
+                                        return (
+                                          <p className="mt-1 text-[11px] font-medium text-amber-700">
+                                            Few left ({row.stock} available)
+                                          </p>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeItem(item.id)}
+                                    className="shrink-0 rounded-full p-1 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                    aria-label={`Remove ${item.name}`}
+                                  >
+                                    <IconTrash size={14} stroke={1.5} />
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-1 py-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateQty(item.id, item.quantity - 1)
+                                      }
+                                      className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
+                                      aria-label="Decrease quantity"
+                                    >
+                                      <IconMinus size={12} stroke={2} />
+                                    </button>
+                                    <motion.span
+                                      key={item.quantity}
+                                      initial={{ scale: 0.7 }}
+                                      animate={{ scale: 1 }}
+                                      className="w-6 text-center text-sm font-bold text-zinc-800"
+                                    >
+                                      {item.quantity}
+                                    </motion.span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const cap =
+                                          row && row.stock > 0
+                                            ? row.stock
+                                            : item.stock && item.stock > 0
+                                              ? item.stock
+                                              : undefined;
+                                        if (cap !== undefined) {
+                                          updateQty(
+                                            item.id,
+                                            Math.min(item.quantity + 1, cap),
+                                          );
+                                        } else {
+                                          updateQty(
+                                            item.id,
+                                            item.quantity + 1,
+                                          );
+                                        }
+                                      }}
+                                      disabled={(() => {
+                                        if (stockCheck.loading) return false;
+                                        if (!row) return false;
+                                        if (row.stock > 0) {
+                                          return item.quantity >= row.stock;
+                                        }
+                                        return true;
+                                      })()}
+                                      className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600 disabled:pointer-events-none disabled:opacity-35"
+                                      aria-label="Increase quantity"
+                                    >
+                                      <IconPlus size={12} stroke={2} />
+                                    </button>
+                                  </div>
+
+                                  <p className="text-sm font-bold text-zinc-900">
+                                    ₹
+                                    {(
+                                      item.price * item.quantity
+                                    ).toLocaleString("en-IN")}
+                                  </p>
+                                </div>
+                              </div>
+                            </motion.li>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </ul>
+
+                    {recommendationsStrip}
+
+                    <div className="space-y-3 border-t border-zinc-100 px-4 py-3">
+                      <div>
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                          Delivery
+                        </p>
+                        {isSignedIn ? (
+                          <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
+                            <div className="mb-1.5 flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <IconMapPin
+                                  size={13}
+                                  stroke={1.5}
+                                  className="text-primary-600"
+                                />
+                                <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                                  Delivering to
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setView("address-list")}
+                                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary-600 hover:bg-primary-100"
+                              >
+                                <IconPencil size={11} stroke={2} />
+                                {address ? "Change" : "Add"}
+                              </button>
+                            </div>
+                            {address ? (
+                              <div className="space-y-0.5">
+                                <p className="text-sm font-semibold leading-snug text-zinc-800">
+                                  {address.fullName}
+                                </p>
+                                <p className="text-[11px] leading-relaxed text-zinc-500">
+                                  {address.line1}
+                                  {address.line2 ? `, ${address.line2}` : ""},{" "}
+                                  {address.city}, {address.state}
+                                  &nbsp;&ndash;&nbsp;
+                                  {address.pincode}
+                                </p>
+                                <p className="text-[11px] text-zinc-400">
+                                  {address.phone}
+                                </p>
+                                <div className="mt-1.5 flex items-center gap-1 text-[11px] text-primary-600">
+                                  <IconTruck size={12} stroke={1.5} />
+                                  <span className="font-semibold">
+                                    Est. delivery:&nbsp;
+                                    {(() => {
+                                      const from = new Date();
+                                      from.setDate(from.getDate() + 5);
+                                      const to = new Date();
+                                      to.setDate(to.getDate() + 7);
+                                      const fmt = (d: Date) =>
+                                        d.toLocaleDateString("en-IN", {
+                                          day: "numeric",
+                                          month: "short",
+                                        });
+                                      return `${fmt(from)} – ${fmt(to)}`;
+                                    })()}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-[11px] italic text-zinc-400">
+                                No delivery address added yet.
                               </p>
                             )}
-                            {(() => {
-                              if (stockCheck.loading || !row) return null;
-                              if (!row.canCheckout && row.reason) {
-                                return (
-                                  <p className="mt-1 text-[11px] font-medium text-red-600">
-                                    {row.reason}
-                                  </p>
-                                );
-                              }
-                              if (
-                                row.canCheckout &&
-                                getStockLevel(row.stock, row.stockCapacity) ===
-                                  "few"
-                              ) {
-                                return (
-                                  <p className="mt-1 text-[11px] font-medium text-amber-700">
-                                    Few left ({row.stock} available)
-                                  </p>
-                                );
-                              }
-                              return null;
-                            })()}
                           </div>
-                          {/* Remove */}
-                          <button
-                            type="button"
-                            onClick={() => removeItem(item.id)}
-                            className="shrink-0 rounded-full p-1 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                            aria-label={`Remove ${item.name}`}
-                          >
-                            <IconTrash size={14} stroke={1.5} />
-                          </button>
-                        </div>
+                        ) : (
+                          <div className="flex items-start gap-2.5 rounded-xl border border-primary-200/80 bg-primary-50/50 px-3 py-2.5">
+                            <IconUserCircle
+                              size={18}
+                              stroke={1.5}
+                              className="mt-0.5 shrink-0 text-primary-600"
+                            />
+                            <p className="text-[11px] leading-relaxed text-zinc-600">
+                              <span className="font-semibold text-zinc-900">
+                                Sign in to continue.
+                              </span>{" "}
+                              Add a delivery address and complete payment after
+                              logging in.
+                            </p>
+                          </div>
+                        )}
+                      </div>
 
-                        <div className="flex items-center justify-between">
-                          {/* Qty stepper */}
-                          <div className="flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-1 py-0.5">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateQty(item.id, item.quantity - 1)
-                              }
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600"
-                              aria-label="Decrease quantity"
+                      <div>
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                          Coupon
+                        </p>
+                        <div className="rounded-2xl border border-zinc-100 bg-white p-3">
+                          <div className="mb-2 flex items-center justify-between">
+                            <label
+                              htmlFor="coupon-code"
+                              className="text-[11px] font-semibold text-zinc-600"
                             >
-                              <IconMinus size={12} stroke={2} />
-                            </button>
-                            <motion.span
-                              key={item.quantity}
-                              initial={{ scale: 0.7 }}
-                              animate={{ scale: 1 }}
-                              className="w-6 text-center text-sm font-bold text-zinc-800"
-                            >
-                              {item.quantity}
-                            </motion.span>
+                              Have a code?
+                            </label>
                             <button
                               type="button"
                               onClick={() => {
-                                const cap =
-                                  row && row.stock > 0
-                                    ? row.stock
-                                    : item.stock && item.stock > 0
-                                      ? item.stock
-                                      : undefined;
-                                if (cap !== undefined) {
-                                  updateQty(
-                                    item.id,
-                                    Math.min(item.quantity + 1, cap)
-                                  );
-                                } else {
-                                  updateQty(item.id, item.quantity + 1);
-                                }
+                                void fetchAvailableCoupons();
+                                setView("coupons");
                               }}
-                              disabled={(() => {
-                                if (stockCheck.loading) return false;
-                                if (!row) return false;
-                                if (row.stock > 0) {
-                                  return item.quantity >= row.stock;
-                                }
-                                return true;
-                              })()}
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-primary-100 hover:text-primary-600 disabled:pointer-events-none disabled:opacity-35"
-                              aria-label="Increase quantity"
+                              className="flex items-center gap-1 text-[11px] font-semibold text-primary-600 hover:underline"
                             >
-                              <IconPlus size={12} stroke={2} />
+                              <IconTag size={11} stroke={2} />
+                              View all
                             </button>
                           </div>
-
-                          {/* Line total */}
-                          <p className="text-sm font-bold text-zinc-900">
-                            ₹
-                            {(item.price * item.quantity).toLocaleString(
-                              "en-IN",
-                            )}
+                          <div className="flex items-center gap-2">
+                            <input
+                              id="coupon-code"
+                              value={couponCode}
+                              onChange={(event) => {
+                                setCouponCode(event.target.value);
+                                if (couponError) setCouponError("");
+                                if (couponSuccess) setCouponSuccess("");
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  void applyCoupon();
+                                }
+                              }}
+                              placeholder="Enter code"
+                              className="h-9 flex-1 rounded-full border border-zinc-200 px-3 text-sm text-zinc-800 outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500"
+                              disabled={isApplyingCoupon || items.length === 0}
+                              aria-invalid={Boolean(couponError)}
+                              aria-describedby="coupon-feedback"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void applyCoupon();
+                              }}
+                              disabled={
+                                isApplyingCoupon || items.length === 0
+                              }
+                              className={`h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors ${
+                                isApplyingCoupon || items.length === 0
+                                  ? "cursor-not-allowed bg-primary-200 text-primary-400"
+                                  : "bg-primary-600 text-white hover:bg-primary-700"
+                              }`}
+                            >
+                              {isApplyingCoupon ? "…" : "Apply"}
+                            </button>
+                          </div>
+                          <p
+                            id="coupon-feedback"
+                            className={`mt-1.5 min-h-4 text-[11px] ${
+                              couponError
+                                ? "text-red-500"
+                                : couponSuccess
+                                  ? "text-emerald-600"
+                                  : "text-zinc-400"
+                            }`}
+                          >
+                            {couponError ||
+                              couponSuccess ||
+                              "\u00a0"}
                           </p>
                         </div>
-                        </div>
-                    </motion.li>
-                  );
-                  })}
-                </AnimatePresence>
-              </ul>
-            )}
+                      </div>
 
-            {/* ── Footer (hidden for signed-out empty bag) ─────────────── */}
-            {!(!isSignedIn && items.length === 0) && (
-            <div className="border-t border-primary-100 p-5">
-              {isSignedIn ? (
-                <div className="mb-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
-                  <div className="mb-1.5 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <IconMapPin
-                        size={13}
-                        stroke={1.5}
-                        className="text-primary-600"
-                      />
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                        Delivering to
-                      </span>
+                      <div className="rounded-2xl border border-zinc-100 bg-zinc-50/90 p-3">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                          Bill details
+                        </p>
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Subtotal</span>
+                            <motion.span
+                              key={subtotal}
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="font-semibold text-zinc-900"
+                            >
+                              ₹{subtotal.toLocaleString("en-IN")}
+                            </motion.span>
+                          </div>
+                          {appliedCoupon && discountAmount > 0 && (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-zinc-500">
+                                  Discount ({appliedCoupon.code})
+                                </span>
+                                <span className="font-semibold text-emerald-700">
+                                  -₹{discountAmount.toLocaleString("en-IN")}
+                                </span>
+                              </div>
+                              {appliedCoupon.description && (
+                                <p className="text-xs text-zinc-400">
+                                  {appliedCoupon.description}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">GST (18%)</span>
+                            <span className="font-semibold text-zinc-900">
+                              ₹{taxAmount.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Shipping</span>
+                            <span className="font-semibold text-zinc-900">
+                              {shippingAmount === 0
+                                ? "Free"
+                                : `₹${shippingAmount.toLocaleString("en-IN")}`}
+                            </span>
+                          </div>
+                          <div className="border-t border-zinc-200/80 pt-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-zinc-700">
+                                Total
+                              </span>
+                              <motion.span
+                                key={finalTotal}
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="font-mono text-base font-bold text-zinc-900"
+                              >
+                                ₹{finalTotal.toLocaleString("en-IN")}
+                              </motion.span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-[10px] text-zinc-400">
+                          Free shipping on orders above ₹999 (before tax).
+                        </p>
+                      </div>
+
+                      {items.length > 0 &&
+                        !stockCheck.loading &&
+                        !stockCheck.canCheckout && (
+                          <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-red-700">
+                            Some items are out of stock or quantities exceed
+                            what we have. Adjust quantities or remove lines to
+                            check out.
+                          </p>
+                        )}
                     </div>
-                    <div className="flex items-center gap-2">
+                  </div>
+
+                  <div className="shrink-0 border-t border-primary-100 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-6px_24px_rgba(0,0,0,0.06)]">
+                    <div className="mb-2 flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                          Amount payable
+                        </p>
+                        <motion.p
+                          key={finalTotal}
+                          initial={{ opacity: 0.85 }}
+                          animate={{ opacity: 1 }}
+                          className="font-mono text-xl font-bold text-zinc-900"
+                        >
+                          ₹{finalTotal.toLocaleString("en-IN")}
+                        </motion.p>
+                      </div>
+                      <p className="max-w-[48%] text-right text-[10px] leading-snug text-zinc-400">
+                        Incl. GST ·{" "}
+                        {shippingAmount === 0
+                          ? "Delivery free"
+                          : `+₹${shippingAmount.toLocaleString("en-IN")} delivery`}
+                      </p>
+                    </div>
+                    {isSignedIn ? (
                       <button
                         type="button"
-                        onClick={() => setView("address-list")}
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-primary-600 hover:bg-primary-100"
+                        onClick={checkout}
+                        disabled={
+                          items.length === 0 ||
+                          stockCheck.loading ||
+                          !stockCheck.canCheckout
+                        }
+                        className={`w-full rounded-full py-3 text-sm font-semibold transition-colors ${
+                          items.length > 0 &&
+                          !stockCheck.loading &&
+                          stockCheck.canCheckout
+                            ? "bg-primary-600 text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 active:bg-primary-800"
+                            : "cursor-not-allowed bg-primary-200 text-primary-400"
+                        }`}
                       >
-                        <IconPencil size={11} stroke={2} />
-                        {address ? "Change" : "Add"}
+                        {stockCheck.loading
+                          ? "Checking stock…"
+                          : "Proceed to Checkout"}
                       </button>
-                    </div>
+                    ) : (
+                      <Link
+                        href="/login"
+                        onClick={closeBag}
+                        aria-disabled={items.length === 0}
+                        className={`flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold transition-colors ${
+                          items.length > 0
+                            ? "bg-primary-600 text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 active:bg-primary-800"
+                            : "pointer-events-none cursor-not-allowed bg-primary-200 text-primary-400"
+                        }`}
+                      >
+                        Log in to checkout
+                      </Link>
+                    )}
                   </div>
-                  {address ? (
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-semibold leading-snug text-zinc-800">
-                        {address.fullName}
-                      </p>
-                      <p className="text-[11px] leading-relaxed text-zinc-500">
-                        {address.line1}
-                        {address.line2 ? `, ${address.line2}` : ""},{" "}
-                        {address.city}, {address.state}&nbsp;&ndash;&nbsp;
-                        {address.pincode}
-                      </p>
-                      <p className="text-[11px] text-zinc-400">{address.phone}</p>
-                      <div className="mt-1.5 flex items-center gap-1 text-[11px] text-primary-600">
-                        <IconTruck size={12} stroke={1.5} />
-                        <span className="font-semibold">
-                          Est. delivery:&nbsp;
-                          {(() => {
-                            const from = new Date();
-                            from.setDate(from.getDate() + 5);
-                            const to = new Date();
-                            to.setDate(to.getDate() + 7);
-                            const fmt = (d: Date) =>
-                              d.toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                              });
-                            return `${fmt(from)} – ${fmt(to)}`;
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-[11px] italic text-zinc-400">
-                      No delivery address added yet.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-primary-200/80 bg-primary-50/50 px-3 py-2.5">
-                  <IconUserCircle
-                    size={18}
-                    stroke={1.5}
-                    className="mt-0.5 shrink-0 text-primary-600"
-                  />
-                  <p className="text-[11px] leading-relaxed text-zinc-600">
-                    <span className="font-semibold text-zinc-900">
-                      Sign in to continue.
-                    </span>{" "}
-                    You can review your bag below; log in to add a delivery
-                    address and pay.
-                  </p>
-                </div>
-              )}
-
-              <div className="mb-3">
-                <div className="mb-1 flex items-center justify-between">
-                  <label
-                    htmlFor="coupon-code"
-                    className="text-xs font-semibold uppercase tracking-wide text-zinc-500"
-                  >
-                    Coupon code
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void fetchAvailableCoupons();
-                      setView("coupons");
-                    }}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-primary-600 hover:underline"
-                  >
-                    <IconTag size={11} stroke={2} />
-                    View Coupons
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="coupon-code"
-                    value={couponCode}
-                    onChange={(event) => {
-                      setCouponCode(event.target.value);
-                      if (couponError) setCouponError("");
-                      if (couponSuccess) setCouponSuccess("");
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void applyCoupon();
-                      }
-                    }}
-                    placeholder="Enter code"
-                    className="h-10 flex-1 rounded-full border border-zinc-200 px-4 text-sm text-zinc-800 outline-none transition-colors placeholder:text-zinc-400 focus:border-primary-500"
-                    disabled={isApplyingCoupon || items.length === 0}
-                    aria-invalid={Boolean(couponError)}
-                    aria-describedby="coupon-feedback"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void applyCoupon();
-                    }}
-                    disabled={isApplyingCoupon || items.length === 0}
-                    className={`h-10 rounded-full px-4 text-xs font-semibold transition-colors ${
-                      isApplyingCoupon || items.length === 0
-                        ? "cursor-not-allowed bg-primary-200 text-primary-400"
-                        : "bg-primary-600 text-white hover:bg-primary-700"
-                    }`}
-                  >
-                    {isApplyingCoupon ? "Applying..." : "Apply"}
-                  </button>
-                </div>
-                <p
-                  id="coupon-feedback"
-                  className={`mt-1 min-h-4 text-[11px] ${
-                    couponError
-                      ? "text-red-500"
-                      : couponSuccess
-                        ? "text-emerald-600"
-                        : "text-zinc-400"
-                  }`}
-                >
-                </p>
-              </div>
-
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="text-zinc-500 font-medium">Subtotal</span>
-                <motion.span
-                  key={subtotal}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="font-bold text-zinc-900"
-                >
-                  ₹{subtotal.toLocaleString("en-IN")}
-                </motion.span>
-              </div>
-              {appliedCoupon && discountAmount > 0 && (
-                <div className="mb-1 flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-500 font-medium">
-                      Discount ({appliedCoupon.code})
-                    </span>
-                    <span className="font-bold text-emerald-700">
-                      -₹{discountAmount.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                  {appliedCoupon.description && (
-                    <p className="text-xs text-zinc-400 pl-0.5">{appliedCoupon.description}</p>
-                  )}
-                </div>
-              )}
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="text-zinc-500 font-medium">
-                  Taxes (GST 18%)
-                </span>
-                <span className="font-bold text-zinc-900">
-                  ₹{taxAmount.toLocaleString("en-IN")}
-                </span>
-              </div>
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="text-zinc-500 font-medium">Shipping</span>
-                <span className="font-bold text-zinc-900">
-                  {shippingAmount === 0
-                    ? "Free"
-                    : `₹${shippingAmount.toLocaleString("en-IN")}`}
-                </span>
-              </div>
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="text-zinc-500 font-medium">Total</span>
-                <motion.span
-                  key={finalTotal}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="font-bold text-zinc-900"
-                >
-                  ₹{finalTotal.toLocaleString("en-IN")}
-                </motion.span>
-              </div>
-              <p className="mb-3 text-[11px] text-zinc-400">
-                Shipping is free on orders above ₹999
-              </p>
-              {items.length > 0 &&
-                !stockCheck.loading &&
-                !stockCheck.canCheckout && (
-                  <p className="mb-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-red-700">
-                    Some items are out of stock or quantities exceed what we have.
-                    Reduce quantities or remove those lines to check out. You can
-                    keep them in your bag until they are back.
-                  </p>
-                )}
-              {isSignedIn ? (
-                <button
-                  type="button"
-                  onClick={checkout}
-                  disabled={
-                    items.length === 0 ||
-                    stockCheck.loading ||
-                    !stockCheck.canCheckout
-                  }
-                  className={`w-full rounded-full py-3 text-sm font-semibold transition-colors ${
-                    items.length > 0 &&
-                    !stockCheck.loading &&
-                    stockCheck.canCheckout
-                      ? "bg-primary-600 text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 active:bg-primary-800"
-                      : "cursor-not-allowed bg-primary-200 text-primary-400"
-                  }`}
-                >
-                  {stockCheck.loading
-                    ? "Checking stock…"
-                    : "Proceed to Checkout"}
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={closeBag}
-                  aria-disabled={items.length === 0}
-                  className={`flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold transition-colors ${
-                    items.length > 0
-                      ? "bg-primary-600 text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 active:bg-primary-800"
-                      : "pointer-events-none cursor-not-allowed bg-primary-200 text-primary-400"
-                  }`}
-                >
-                  Log in to checkout
-                </Link>
+                </>
               )}
             </div>
-            )}
 
             {/* ── Address-edit overlay ─────────────────────────────────── */}
             <AnimatePresence>

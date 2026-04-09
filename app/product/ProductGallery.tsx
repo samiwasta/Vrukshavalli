@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { IconGift } from "@tabler/icons-react";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { cn } from "@/lib/util";
 
 export const PRODUCT_CATEGORIES = [
   "plants",
@@ -221,6 +223,20 @@ export default function ProductGallery() {
       ? "plants"
       : null;
 
+  const plantTypeInUrl = searchParams.get("plantType");
+  const plantTypeForApi =
+    categoryForApi === "plants" &&
+    (plantTypeInUrl === "indoor" || plantTypeInUrl === "outdoor")
+      ? plantTypeInUrl
+      : null;
+
+  const plantsTabActive: "all" | "indoor" | "outdoor" =
+    plantTypeForApi === "indoor"
+      ? "indoor"
+      : plantTypeForApi === "outdoor"
+        ? "outdoor"
+        : "all";
+
   const header = useMemo(() => {
     if (searchQuery) {
       return {
@@ -278,6 +294,7 @@ export default function ProductGallery() {
         if (filterNew) query.set("isNew", "true");
         if (filterBestSeller) query.set("isBestSeller", "true");
         if (filterHandPicked) query.set("isHandPicked", "true");
+        if (plantTypeForApi) query.set("plantType", plantTypeForApi);
 
         const res = await fetch(`/api/products?${query.toString()}`);
         const json = await res.json();
@@ -327,6 +344,7 @@ export default function ProductGallery() {
     filterNew,
     filterBestSeller,
     filterHandPicked,
+    plantTypeForApi,
   ]);
 
   if (loading) {
@@ -361,6 +379,51 @@ export default function ProductGallery() {
             {header.subtitle}
           </p>
         </div>
+
+        {categoryForApi === "plants" && (
+          <div
+            className="mb-8 flex flex-wrap gap-2 border-b border-primary-100 pb-1"
+            role="tablist"
+            aria-label="Plant type"
+          >
+            <Link
+              href="/product?category=plants"
+              scroll={false}
+              className={cn(
+                "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                plantsTabActive === "all"
+                  ? "bg-primary-600 text-white shadow-md shadow-primary-600/20"
+                  : "bg-primary-50 text-primary-700 hover:bg-primary-100",
+              )}
+            >
+              All plants
+            </Link>
+            <Link
+              href="/product?category=plants&plantType=indoor"
+              scroll={false}
+              className={cn(
+                "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                plantsTabActive === "indoor"
+                  ? "bg-primary-600 text-white shadow-md shadow-primary-600/20"
+                  : "bg-primary-50 text-primary-700 hover:bg-primary-100",
+              )}
+            >
+              Indoor plants
+            </Link>
+            <Link
+              href="/product?category=plants&plantType=outdoor"
+              scroll={false}
+              className={cn(
+                "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                plantsTabActive === "outdoor"
+                  ? "bg-primary-600 text-white shadow-md shadow-primary-600/20"
+                  : "bg-primary-50 text-primary-700 hover:bg-primary-100",
+              )}
+            >
+              Outdoor plants
+            </Link>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 min-[425px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map((product, index) => (

@@ -42,6 +42,33 @@ interface Product {
   images: string[] | null;
   categoryId: string | null;
   category: Category | null;
+  plantType: string | null;
+  potSizes: string[] | null;
+  light: string | null;
+  water: string | null;
+  sizeDetail: string | null;
+  petFriendly: boolean | null;
+  careLevel: string | null;
+}
+
+type PlantTypeForm = "" | "indoor" | "outdoor";
+
+function potSizesFromBools(p4: boolean, p6: boolean): string[] | null {
+  const a: string[] = [];
+  if (p4) a.push('4"');
+  if (p6) a.push('6"');
+  return a.length ? a : null;
+}
+
+function parsePotBools(potSizes: string[] | null | undefined): {
+  p4: boolean;
+  p6: boolean;
+} {
+  const ps = potSizes ?? [];
+  return {
+    p4: ps.some((s) => s.includes("4")),
+    p6: ps.some((s) => s.includes("6")),
+  };
 }
 
 type ProductFormFlags = {
@@ -76,9 +103,25 @@ export default function AdminProductsPage() {
   const [editForm, setEditForm] = useState<{
     name: string; description: string; price: string; originalPrice: string;
     categoryId: string; stock: number;
+    plantType: PlantTypeForm;
+    potSize4: boolean;
+    potSize6: boolean;
+    light: string;
+    water: string;
+    sizeDetail: string;
+    petFriendly: boolean;
+    careLevel: "Easy" | "Moderate" | "Expert";
   } & ProductFormFlags>({
     name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: 0,
     isActive: true, isNew: false, isBestSeller: false, isHandPicked: false, isCeramicFeatured: false,
+    plantType: "",
+    potSize4: false,
+    potSize6: false,
+    light: "",
+    water: "",
+    sizeDetail: "",
+    petFriendly: false,
+    careLevel: "Easy",
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -92,9 +135,19 @@ export default function AdminProductsPage() {
   const blankForm = {
     name: "", description: "", price: "", originalPrice: "", categoryId: "", stock: "",
     isNew: false, isBestSeller: false, isHandPicked: false, isCeramicFeatured: false, isActive: true,
+    plantType: "" as PlantTypeForm,
+    potSize4: false,
+    potSize6: false,
+    light: "",
+    water: "",
+    sizeDetail: "",
+    petFriendly: false,
+    careLevel: "Easy" as "Easy" | "Moderate" | "Expert",
   };
   const [creating, setCreating] = useState(false);
-  const [createForm, setCreateForm] = useState(blankForm);
+  const [createForm, setCreateForm] = useState<
+    typeof blankForm
+  >(blankForm);
   const [createSaving, setCreateSaving] = useState(false);
   const [mainImgUrl, setMainImgUrl] = useState("");
   const [mainImgUploading, setMainImgUploading] = useState(false);
@@ -161,6 +214,7 @@ export default function AdminProductsPage() {
 
   const openEdit = (p: Product) => {
     setEditing(p);
+    const { p4, p6 } = parsePotBools(p.potSizes);
     setEditForm({
       name: p.name,
       description: p.description ?? "",
@@ -173,6 +227,18 @@ export default function AdminProductsPage() {
       isBestSeller: p.isBestSeller,
       isHandPicked: p.isHandPicked,
       isCeramicFeatured: p.isCeramicFeatured ?? false,
+      plantType:
+        p.plantType === "indoor" || p.plantType === "outdoor" ? p.plantType : "",
+      potSize4: p4,
+      potSize6: p6,
+      light: p.light ?? "",
+      water: p.water ?? "",
+      sizeDetail: p.sizeDetail ?? "",
+      petFriendly: p.petFriendly ?? false,
+      careLevel:
+        p.careLevel === "Moderate" || p.careLevel === "Expert"
+          ? p.careLevel
+          : "Easy",
     });
     setEditMainImg(p.image);
     setEditExtraImgs(p.images ?? []);
@@ -205,6 +271,13 @@ export default function AdminProductsPage() {
         isBestSeller: editForm.isBestSeller,
         isHandPicked: editForm.isHandPicked,
         isCeramicFeatured: editForm.isCeramicFeatured,
+        plantType: editForm.plantType || null,
+        potSizes: potSizesFromBools(editForm.potSize4, editForm.potSize6),
+        light: editForm.light.trim() || null,
+        water: editForm.water.trim() || null,
+        sizeDetail: editForm.sizeDetail.trim() || null,
+        petFriendly: editForm.petFriendly,
+        careLevel: editForm.careLevel,
       }),
     });
     const d = await r.json();
@@ -248,6 +321,13 @@ export default function AdminProductsPage() {
       isHandPicked: createForm.isHandPicked,
       isCeramicFeatured: createForm.isCeramicFeatured,
       isActive: createForm.isActive,
+      plantType: createForm.plantType || null,
+      potSizes: potSizesFromBools(createForm.potSize4, createForm.potSize6),
+      light: createForm.light.trim() || null,
+      water: createForm.water.trim() || null,
+      sizeDetail: createForm.sizeDetail.trim() || null,
+      petFriendly: createForm.petFriendly,
+      careLevel: createForm.careLevel,
     };
     const r = await fetch("/api/admin/products", {
       method: "POST",
@@ -729,6 +809,103 @@ export default function AdminProductsPage() {
                   <div className="border-t border-stone-100" />
 
                   <div className="space-y-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Plant details</p>
+                    <p className="text-xs text-stone-500">Indoor/outdoor type, pot sizes (4&quot; / 6&quot;), and care specs. Optional for non-plant items.</p>
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Plant type</label>
+                      <select
+                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                        value={createForm.plantType}
+                        onChange={(e) => setCreateForm((f) => ({ ...f, plantType: e.target.value as PlantTypeForm }))}
+                      >
+                        <option value="">Not a plant / not set</option>
+                        <option value="indoor">Indoor plant</option>
+                        <option value="outdoor">Outdoor plant</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-stone-600 mb-2">Pot sizes offered</p>
+                      <div className="flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={createForm.potSize4}
+                            onChange={(e) => setCreateForm((f) => ({ ...f, potSize4: e.target.checked }))}
+                            className="rounded border-stone-300"
+                          />
+                          4&quot; pot
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={createForm.potSize6}
+                            onChange={(e) => setCreateForm((f) => ({ ...f, potSize6: e.target.checked }))}
+                            className="rounded border-stone-300"
+                          />
+                          6&quot; pot
+                        </label>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Light</label>
+                        <input
+                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                          placeholder="e.g. Bright indirect"
+                          value={createForm.light}
+                          onChange={(e) => setCreateForm((f) => ({ ...f, light: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Water</label>
+                        <input
+                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                          placeholder="e.g. When top soil dries"
+                          value={createForm.water}
+                          onChange={(e) => setCreateForm((f) => ({ ...f, water: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Size note (mature / height)</label>
+                      <input
+                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                        placeholder="Shown on SIZE card; if empty, pot sizes are listed instead"
+                        value={createForm.sizeDetail}
+                        onChange={(e) => setCreateForm((f) => ({ ...f, sizeDetail: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                      <div>
+                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Care level</label>
+                        <select
+                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                          value={createForm.careLevel}
+                          onChange={(e) =>
+                            setCreateForm((f) => ({
+                              ...f,
+                              careLevel: e.target.value as "Easy" | "Moderate" | "Expert",
+                            }))
+                          }
+                        >
+                          <option value="Easy">Easy</option>
+                          <option value="Moderate">Moderate</option>
+                          <option value="Expert">Expert</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
+                        <span className="text-xs font-semibold text-stone-700">Pet safe</span>
+                        <Switch
+                          checked={createForm.petFriendly}
+                          onCheckedChange={(v) => setCreateForm((f) => ({ ...f, petFriendly: v }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-stone-100" />
+
+                  <div className="space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Store visibility</p>
                     <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
                       <div className="min-w-0">
@@ -975,6 +1152,103 @@ export default function AdminProductsPage() {
                           <option value="">No category</option>
                           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-stone-100" />
+
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Plant details</p>
+                    <p className="text-xs text-stone-500">Indoor/outdoor type, pot sizes (4&quot; / 6&quot;), and care specs.</p>
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Plant type</label>
+                      <select
+                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                        value={editForm.plantType}
+                        onChange={(e) => setEditForm((f) => ({ ...f, plantType: e.target.value as PlantTypeForm }))}
+                      >
+                        <option value="">Not a plant / not set</option>
+                        <option value="indoor">Indoor plant</option>
+                        <option value="outdoor">Outdoor plant</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-stone-600 mb-2">Pot sizes offered</p>
+                      <div className="flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editForm.potSize4}
+                            onChange={(e) => setEditForm((f) => ({ ...f, potSize4: e.target.checked }))}
+                            className="rounded border-stone-300"
+                          />
+                          4&quot; pot
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editForm.potSize6}
+                            onChange={(e) => setEditForm((f) => ({ ...f, potSize6: e.target.checked }))}
+                            className="rounded border-stone-300"
+                          />
+                          6&quot; pot
+                        </label>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Light</label>
+                        <input
+                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                          placeholder="e.g. Bright indirect"
+                          value={editForm.light}
+                          onChange={(e) => setEditForm((f) => ({ ...f, light: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Water</label>
+                        <input
+                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                          placeholder="e.g. When top soil dries"
+                          value={editForm.water}
+                          onChange={(e) => setEditForm((f) => ({ ...f, water: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Size note (mature / height)</label>
+                      <input
+                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                        placeholder="Shown on SIZE card; if empty, pot sizes are listed instead"
+                        value={editForm.sizeDetail}
+                        onChange={(e) => setEditForm((f) => ({ ...f, sizeDetail: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                      <div>
+                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Care level</label>
+                        <select
+                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                          value={editForm.careLevel}
+                          onChange={(e) =>
+                            setEditForm((f) => ({
+                              ...f,
+                              careLevel: e.target.value as "Easy" | "Moderate" | "Expert",
+                            }))
+                          }
+                        >
+                          <option value="Easy">Easy</option>
+                          <option value="Moderate">Moderate</option>
+                          <option value="Expert">Expert</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
+                        <span className="text-xs font-semibold text-stone-700">Pet safe</span>
+                        <Switch
+                          checked={editForm.petFriendly}
+                          onCheckedChange={(v) => setEditForm((f) => ({ ...f, petFriendly: v }))}
+                        />
                       </div>
                     </div>
                   </div>
