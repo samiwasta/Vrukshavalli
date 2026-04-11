@@ -39,9 +39,10 @@ export async function POST(req: Request) {
   const skipVerify = process.env.CASHFREE_SKIP_WEBHOOK_VERIFY === "true";
 
   if (!skipVerify && secret) {
-    if (!signature || !timestamp) {
-      return NextResponse.json({ error: "Missing webhook signature" }, { status: 401 });
-    }
+  // Allow test ping without signature
+  if (!signature || !timestamp) {
+    return NextResponse.json({ ok: true });
+  }
     if (!verifyCashfreeWebhookSignature(signature, rawBody, timestamp, secret)) {
       console.error("Cashfree webhook: signature verification failed");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
 
   try {
     if (
-      webhookType === "PAYMENT_SUCCESS_WEBHOOK" ||
+      webhookType === "PAYMENT_SUCCESS" ||
       paymentStatus === "SUCCESS"
     ) {
       const [updated] = await db
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
     }
 
     if (
-      webhookType === "PAYMENT_FAILED_WEBHOOK" ||
+      webhookType === "PAYMENT_FAILED" ||
       paymentStatus === "FAILED"
     ) {
       await db
@@ -127,9 +128,7 @@ export async function POST(req: Request) {
 
     if (
       webhookType === "PAYMENT_USER_DROPPED_WEBHOOK" ||
-      paymentStatus === "USER_DROPPED" ||
-      paymentStatus === "CANCELLED" ||
-      paymentStatus === "NOT_ATTEMPTED"
+      paymentStatus === "USER_DROPPED"
     ) {
       await db
         .update(orders)

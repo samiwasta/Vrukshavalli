@@ -70,16 +70,14 @@ export async function POST(req: Request) {
     "-" +
     Math.floor(Math.random() * 10000);
 
-  const baseUrl = process.env.BETTER_AUTH_URL?.replace(/\/$/, "");
-  const orderMeta: Record<string, string> = {
-    return_url: `${process.env.BETTER_AUTH_URL}/thankyou?order_id=${orderId}`,
-  };
-  const notifyUrl =
-    process.env.CASHFREE_NOTIFY_URL ??
-    (baseUrl ? `${baseUrl}/api/payments/webhook` : "");
-  if (notifyUrl) {
-    orderMeta.notify_url = notifyUrl;
-  }
+  const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+  "http://localhost:3000";
+
+const orderMeta: Record<string, string> = {
+  return_url: `${baseUrl}/thankyou?order_id=${orderId}`,
+  notify_url: `${baseUrl}/api/payments/webhook`,
+};
 
   const payload = {
     order_id: orderId,

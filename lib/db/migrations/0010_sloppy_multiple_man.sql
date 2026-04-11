@@ -1,2 +1,0 @@
-ALTER TABLE "products" ADD COLUMN "is_ceramic_featured" boolean DEFAULT false;
-UPDATE "products" SET "is_ceramic_featured" = true WHERE "category_id" IN (SELECT "id" FROM "categories" WHERE "slug" = 'pots-planters');

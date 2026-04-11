@@ -48,7 +48,16 @@ export function useDeliveryAddress() {
 
         const res = await fetch("/api/addresses");
 
-        if (!res.ok) throw new Error("Failed to load");
+        if (res.status === 401) {
+      setAddresses([]);
+      setSelectedAddress(null);
+      return;
+    }
+
+    if (!res.ok) {
+      console.error("API failed:", res.status);
+      return;
+    }
 
         const json = await res.json();
 
