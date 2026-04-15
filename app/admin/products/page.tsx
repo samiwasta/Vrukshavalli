@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { useUploadThing } from "@/lib/uploadthing-react";
 import { Switch } from "@/components/ui/switch";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 import { adminStockDisplay } from "@/lib/stock";
 
 interface Category { id: string; name: string; slug: string; }
@@ -181,6 +182,25 @@ export default function AdminProductsPage() {
   });
 
   const closeCreate = () => { setCreating(false); setCreateForm(blankForm); setMainImgUrl(""); setExtraImgs([]); };
+  const isPlantCategory = (id: string) => {
+    if (!id) return false;
+    const category = categories.find((c) => c.id === id);
+    if (!category) return false;
+    return (
+      category.slug.trim().toLowerCase() === "plants" ||
+      category.name.trim().toLowerCase() === "plants"
+    );
+  };
+  const modalCategoryOptions = categories.filter((c) => {
+    const slug = c.slug.trim().toLowerCase();
+    const name = c.name.trim().toLowerCase();
+    return (
+      slug !== "indoor-plants" &&
+      slug !== "outdoor-plants" &&
+      name !== "indoor plants" &&
+      name !== "outdoor plants"
+    );
+  });
 
   useEffect(() => {
     fetch("/api/categories").then(r => r.json()).then(d => setCategories(d.data ?? []));
@@ -617,14 +637,14 @@ export default function AdminProductsPage() {
 
       {/* Create Modal */}
       {creating && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden border border-stone-200/80">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-stone-100 shrink-0 bg-white">
               <div>
-                <h2 className="font-bold text-stone-900 text-lg">Add New Product</h2>
-                <p className="text-xs text-stone-400 mt-0.5">Fill in the details to list a new plant or product</p>
+                <h2 className="font-bold text-stone-900 text-xl">Add New Product</h2>
+                <p className="text-sm text-stone-500 mt-0.5">Fill in product details, upload photos, and publish to your catalog.</p>
               </div>
               <button onClick={closeCreate} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors">
                 <IconX className="w-5 h-5" />
@@ -633,15 +653,15 @@ export default function AdminProductsPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-5 min-h-full divide-x divide-stone-100">
+              <div className="grid grid-cols-1 lg:grid-cols-12 min-h-full lg:divide-x divide-stone-100">
 
                 {/* Left — Images */}
-                <div className="col-span-2 p-5 space-y-5">
+                <div className="lg:col-span-4 p-6 space-y-5 bg-stone-50/40">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Images</p>
 
                   {/* Cover photo */}
                   <div>
-                    <p className="text-xs font-medium text-stone-600 mb-2">Cover Photo <span className="text-red-400">*</span></p>
+                    <p className="text-xs font-medium text-stone-700 mb-2">Cover Photo <span className="text-red-400">*</span></p>
                     <input ref={mainInputRef} type="file" accept="image/*" className="hidden"
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) startMainUpload([f]); if (mainInputRef.current) mainInputRef.current.value = ""; }} />
                     {mainImgUrl ? (
@@ -661,7 +681,7 @@ export default function AdminProductsPage() {
                       </div>
                     ) : (
                       <button type="button" onClick={() => mainInputRef.current?.click()}
-                        className={`w-full aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2.5 transition-all ${
+                        className={`w-full aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2.5 transition-all ${
                           mainImgUploading ? "border-primary-300 bg-primary-50/60" : "border-stone-200 bg-stone-50 hover:border-primary-400 hover:bg-primary-50/40"
                         }`}>
                         {mainImgUploading ? (
@@ -686,7 +706,7 @@ export default function AdminProductsPage() {
 
                   {/* Extra photos */}
                   <div>
-                    <p className="text-xs font-medium text-stone-600 mb-2">Extra Photos <span className="text-stone-400">(up to 4)</span></p>
+                    <p className="text-xs font-medium text-stone-700 mb-2">Extra Photos <span className="text-stone-500">(up to 4)</span></p>
                     <input ref={extraInputRef} type="file" accept="image/*" multiple className="hidden"
                       onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length) startExtraUpload(files.slice(0, 4 - extraImgs.length)); if (extraInputRef.current) extraInputRef.current.value = ""; }} />
                     <div className="grid grid-cols-2 gap-2">
@@ -718,14 +738,18 @@ export default function AdminProductsPage() {
                 </div>
 
                 {/* Right — Form fields */}
-                <div className="col-span-3 p-5 space-y-5">
+                <div className="lg:col-span-8 p-6 space-y-6">
 
                   {/* Basic Info */}
                   <div className="space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Basic Info</p>
                     <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Product Name <span className="text-red-400">*</span></label>
+                      <label className="text-xs font-medium text-stone-700 block mb-1.5">Product Name <span className="text-red-400">*</span></label>
                       <input
+                        type="text"
+                        required
+                        autoFocus
+                        autoComplete="off"
                         className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                         placeholder="e.g. Monstera Deliciosa"
                         value={createForm.name}
@@ -733,14 +757,16 @@ export default function AdminProductsPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Description</label>
-                      <textarea
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none bg-stone-50 focus:bg-white transition-colors"
-                        rows={3}
-                        placeholder="Brief product description…"
+                      <label className="text-xs font-medium text-stone-700 block mb-2">Description</label>
+                      <RichTextEditor
                         value={createForm.description}
-                        onChange={(e) => setCreateForm(f => ({ ...f, description: e.target.value }))}
+                        onChange={(v) => setCreateForm((f) => ({ ...f, description: v }))}
+                        placeholder="Write a detailed product description with formatting..."
+                        minHeightClassName="min-h-[200px]"
+                        enableImageUpload={false}
+                        className="text-sm"
                       />
+                      <p className="text-xs text-stone-500 mt-1.5">Use the toolbar to format text with bold, italic, lists, headings, and more.</p>
                     </div>
                   </div>
 
@@ -749,12 +775,12 @@ export default function AdminProductsPage() {
                   {/* Pricing */}
                   <div className="space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Pricing</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Selling Price (₹) <span className="text-red-400">*</span></label>
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Selling Price (₹) <span className="text-red-400">*</span></label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400 font-medium">₹</span>
-                          <input type="number" min="0"
+                          <input type="number" min="0" step="0.01" required inputMode="decimal"
                             className="w-full text-sm border border-stone-200 rounded-xl pl-7 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                             placeholder="299"
                             value={createForm.price}
@@ -763,10 +789,10 @@ export default function AdminProductsPage() {
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Original Price (₹) <span className="text-stone-400">(optional)</span></label>
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Original Price (₹) <span className="text-stone-400">(optional)</span></label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400 font-medium">₹</span>
-                          <input type="number" min="0"
+                          <input type="number" min="0" step="0.01" inputMode="decimal"
                             className="w-full text-sm border border-stone-200 rounded-xl pl-7 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                             placeholder="399"
                             value={createForm.originalPrice}
@@ -782,10 +808,10 @@ export default function AdminProductsPage() {
                   {/* Inventory */}
                   <div className="space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Inventory</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Stock Quantity</label>
-                        <input type="number" min="1" step="1"
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Stock Quantity <span className="text-red-400">*</span></label>
+                        <input type="number" min="1" step="1" required inputMode="numeric"
                           className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                           placeholder="e.g. 10"
                           value={createForm.stock}
@@ -793,115 +819,119 @@ export default function AdminProductsPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Category</label>
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Category</label>
                         <select
                           className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                           value={createForm.categoryId}
                           onChange={(e) => setCreateForm(f => ({ ...f, categoryId: e.target.value }))}
                         >
                           <option value="">No category</option>
-                          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          {modalCategoryOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
                     </div>
                   </div>
 
-                  <div className="border-t border-stone-100" />
+                  {isPlantCategory(createForm.categoryId) && (
+                    <>
+                      <div className="border-t border-stone-100" />
 
-                  <div className="space-y-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Plant details</p>
-                    <p className="text-xs text-stone-500">Indoor/outdoor type, pot sizes (4&quot; / 6&quot;), and care specs. Optional for non-plant items.</p>
-                    <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Plant type</label>
-                      <select
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                        value={createForm.plantType}
-                        onChange={(e) => setCreateForm((f) => ({ ...f, plantType: e.target.value as PlantTypeForm }))}
-                      >
-                        <option value="">Not a plant / not set</option>
-                        <option value="indoor">Indoor plant</option>
-                        <option value="outdoor">Outdoor plant</option>
-                      </select>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-stone-600 mb-2">Pot sizes offered</p>
-                      <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                      <div className="space-y-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Plant Details</p>
+                        <p className="text-xs text-stone-500">Pot sizes and care specs.</p>
+                        <div>
+                          <label className="text-xs font-medium text-stone-700 block mb-1.5">Plant type</label>
+                          <select
+                            className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                            value={createForm.plantType}
+                            onChange={(e) => setCreateForm((f) => ({ ...f, plantType: e.target.value as PlantTypeForm }))}
+                          >
+                            <option value="">Not set</option>
+                            <option value="indoor">Indoor plant</option>
+                            <option value="outdoor">Outdoor plant</option>
+                          </select>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-stone-700 mb-2">Pot sizes offered</p>
+                          <div className="flex flex-wrap gap-3">
+                            <label className="inline-flex items-center gap-2 text-sm text-stone-700 cursor-pointer rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={createForm.potSize4}
+                                onChange={(e) => setCreateForm((f) => ({ ...f, potSize4: e.target.checked }))}
+                                className="rounded border-stone-300"
+                              />
+                              4&quot; pot
+                            </label>
+                            <label className="inline-flex items-center gap-2 text-sm text-stone-700 cursor-pointer rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={createForm.potSize6}
+                                onChange={(e) => setCreateForm((f) => ({ ...f, potSize6: e.target.checked }))}
+                                className="rounded border-stone-300"
+                              />
+                              6&quot; pot
+                            </label>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-medium text-stone-700 block mb-1.5">Light</label>
+                            <input
+                              className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                              placeholder="e.g. Bright indirect"
+                              value={createForm.light}
+                              onChange={(e) => setCreateForm((f) => ({ ...f, light: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-stone-700 block mb-1.5">Water</label>
+                            <input
+                              className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                              placeholder="e.g. When top soil dries"
+                              value={createForm.water}
+                              onChange={(e) => setCreateForm((f) => ({ ...f, water: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-stone-700 block mb-1.5">Size note (mature / height)</label>
                           <input
-                            type="checkbox"
-                            checked={createForm.potSize4}
-                            onChange={(e) => setCreateForm((f) => ({ ...f, potSize4: e.target.checked }))}
-                            className="rounded border-stone-300"
+                            className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                            placeholder="Shown on SIZE card; if empty, pot sizes are listed instead"
+                            value={createForm.sizeDetail}
+                            onChange={(e) => setCreateForm((f) => ({ ...f, sizeDetail: e.target.value }))}
                           />
-                          4&quot; pot
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={createForm.potSize6}
-                            onChange={(e) => setCreateForm((f) => ({ ...f, potSize6: e.target.checked }))}
-                            className="rounded border-stone-300"
-                          />
-                          6&quot; pot
-                        </label>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                          <div>
+                            <label className="text-xs font-medium text-stone-700 block mb-1.5">Care level</label>
+                            <select
+                              className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                              value={createForm.careLevel}
+                              onChange={(e) =>
+                                setCreateForm((f) => ({
+                                  ...f,
+                                  careLevel: e.target.value as "Easy" | "Moderate" | "Expert",
+                                }))
+                              }
+                            >
+                              <option value="Easy">Easy</option>
+                              <option value="Moderate">Moderate</option>
+                              <option value="Expert">Expert</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
+                            <span className="text-xs font-semibold text-stone-700">Pet safe</span>
+                            <Switch
+                              checked={createForm.petFriendly}
+                              onCheckedChange={(v) => setCreateForm((f) => ({ ...f, petFriendly: v }))}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Light</label>
-                        <input
-                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                          placeholder="e.g. Bright indirect"
-                          value={createForm.light}
-                          onChange={(e) => setCreateForm((f) => ({ ...f, light: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Water</label>
-                        <input
-                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                          placeholder="e.g. When top soil dries"
-                          value={createForm.water}
-                          onChange={(e) => setCreateForm((f) => ({ ...f, water: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Size note (mature / height)</label>
-                      <input
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                        placeholder="Shown on SIZE card; if empty, pot sizes are listed instead"
-                        value={createForm.sizeDetail}
-                        onChange={(e) => setCreateForm((f) => ({ ...f, sizeDetail: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                      <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Care level</label>
-                        <select
-                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                          value={createForm.careLevel}
-                          onChange={(e) =>
-                            setCreateForm((f) => ({
-                              ...f,
-                              careLevel: e.target.value as "Easy" | "Moderate" | "Expert",
-                            }))
-                          }
-                        >
-                          <option value="Easy">Easy</option>
-                          <option value="Moderate">Moderate</option>
-                          <option value="Expert">Expert</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
-                        <span className="text-xs font-semibold text-stone-700">Pet safe</span>
-                        <Switch
-                          checked={createForm.petFriendly}
-                          onCheckedChange={(v) => setCreateForm((f) => ({ ...f, petFriendly: v }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
 
                   <div className="border-t border-stone-100" />
 
@@ -952,7 +982,7 @@ export default function AdminProductsPage() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-stone-100 px-6 py-4 flex gap-3 shrink-0 bg-stone-50/60">
+            <div className="border-t border-stone-100 px-6 py-4 flex gap-3 shrink-0 bg-white">
               <button onClick={closeCreate} className="flex-1 py-2.5 text-sm font-medium rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 transition-colors">
                 Cancel
               </button>
@@ -972,14 +1002,14 @@ export default function AdminProductsPage() {
 
       {/* Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden border border-stone-200/80">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-stone-100 shrink-0 bg-white">
               <div>
-                <h2 className="font-bold text-stone-900 text-lg">Edit Product</h2>
-                <p className="text-xs text-stone-400 mt-0.5 truncate max-w-sm">{editing.slug}</p>
+                <h2 className="font-bold text-stone-900 text-xl">Edit Product</h2>
+                <p className="text-sm text-stone-500 mt-0.5 truncate max-w-sm">{editing.slug}</p>
               </div>
               <button onClick={() => setEditing(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors">
                 <IconX className="w-5 h-5" />
@@ -988,10 +1018,10 @@ export default function AdminProductsPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-5 min-h-full divide-x divide-stone-100">
+              <div className="grid grid-cols-1 lg:grid-cols-12 min-h-full lg:divide-x divide-stone-100">
 
                 {/* Left — Images */}
-                <div className="col-span-2 p-5 space-y-5">
+                <div className="lg:col-span-4 p-6 space-y-5 bg-stone-50/40">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Images</p>
 
                   {/* Cover photo */}
@@ -1073,13 +1103,13 @@ export default function AdminProductsPage() {
                 </div>
 
                 {/* Right — Form fields */}
-                <div className="col-span-3 p-5 space-y-5">
+                <div className="lg:col-span-8 p-6 space-y-6">
 
                   {/* Basic Info */}
                   <div className="space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Basic Info</p>
                     <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Product Name <span className="text-red-400">*</span></label>
+                      <label className="text-xs font-medium text-stone-700 block mb-1.5">Product Name <span className="text-red-400">*</span></label>
                       <input
                         className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                         value={editForm.name}
@@ -1087,13 +1117,16 @@ export default function AdminProductsPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Description</label>
-                      <textarea
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none bg-stone-50 focus:bg-white transition-colors"
-                        rows={3}
+                      <label className="text-xs font-medium text-stone-700 block mb-2">Description</label>
+                      <RichTextEditor
                         value={editForm.description}
-                        onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
+                        onChange={(v) => setEditForm((f) => ({ ...f, description: v }))}
+                        placeholder="Write a detailed product description with formatting..."
+                        minHeightClassName="min-h-[200px]"
+                        enableImageUpload={false}
+                        className="text-sm"
                       />
+                      <p className="text-xs text-stone-500 mt-1.5">Use the toolbar to format text with bold, italic, lists, headings, and more.</p>
                     </div>
                   </div>
 
@@ -1102,9 +1135,9 @@ export default function AdminProductsPage() {
                   {/* Pricing */}
                   <div className="space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Pricing</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Selling Price (₹) <span className="text-red-400">*</span></label>
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Selling Price (₹) <span className="text-red-400">*</span></label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400 font-medium">₹</span>
                           <input type="number" min="0"
@@ -1115,7 +1148,7 @@ export default function AdminProductsPage() {
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Original Price (₹) <span className="text-stone-400">(optional)</span></label>
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Original Price (₹) <span className="text-stone-400">(optional)</span></label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400 font-medium">₹</span>
                           <input type="number" min="0"
@@ -1133,9 +1166,9 @@ export default function AdminProductsPage() {
                   {/* Inventory */}
                   <div className="space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Inventory</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Stock Quantity</label>
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Stock Quantity</label>
                         <input type="number" min="0"
                           className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                           value={editForm.stock}
@@ -1143,115 +1176,119 @@ export default function AdminProductsPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Category</label>
+                        <label className="text-xs font-medium text-stone-700 block mb-1.5">Category</label>
                         <select
                           className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
                           value={editForm.categoryId}
                           onChange={(e) => setEditForm(f => ({ ...f, categoryId: e.target.value }))}
                         >
                           <option value="">No category</option>
-                          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          {modalCategoryOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
                     </div>
                   </div>
 
-                  <div className="border-t border-stone-100" />
+                  {isPlantCategory(editForm.categoryId) && (
+                    <>
+                      <div className="border-t border-stone-100" />
 
-                  <div className="space-y-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Plant details</p>
-                    <p className="text-xs text-stone-500">Indoor/outdoor type, pot sizes (4&quot; / 6&quot;), and care specs.</p>
-                    <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Plant type</label>
-                      <select
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                        value={editForm.plantType}
-                        onChange={(e) => setEditForm((f) => ({ ...f, plantType: e.target.value as PlantTypeForm }))}
-                      >
-                        <option value="">Not a plant / not set</option>
-                        <option value="indoor">Indoor plant</option>
-                        <option value="outdoor">Outdoor plant</option>
-                      </select>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-stone-600 mb-2">Pot sizes offered</p>
-                      <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                      <div className="space-y-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400">Plant details</p>
+                        <p className="text-xs text-stone-500">Pot sizes and care specs.</p>
+                        <div>
+                          <label className="text-xs font-medium text-stone-700 block mb-1.5">Plant type</label>
+                          <select
+                            className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                            value={editForm.plantType}
+                            onChange={(e) => setEditForm((f) => ({ ...f, plantType: e.target.value as PlantTypeForm }))}
+                          >
+                            <option value="">Not set</option>
+                            <option value="indoor">Indoor plant</option>
+                            <option value="outdoor">Outdoor plant</option>
+                          </select>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-stone-700 mb-2">Pot sizes offered</p>
+                          <div className="flex flex-wrap gap-3">
+                            <label className="inline-flex items-center gap-2 text-sm text-stone-700 cursor-pointer rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={editForm.potSize4}
+                                onChange={(e) => setEditForm((f) => ({ ...f, potSize4: e.target.checked }))}
+                                className="rounded border-stone-300"
+                              />
+                              4&quot; pot
+                            </label>
+                            <label className="inline-flex items-center gap-2 text-sm text-stone-700 cursor-pointer rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={editForm.potSize6}
+                                onChange={(e) => setEditForm((f) => ({ ...f, potSize6: e.target.checked }))}
+                                className="rounded border-stone-300"
+                              />
+                              6&quot; pot
+                            </label>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-medium text-stone-700 block mb-1.5">Light</label>
+                            <input
+                              className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                              placeholder="e.g. Bright indirect"
+                              value={editForm.light}
+                              onChange={(e) => setEditForm((f) => ({ ...f, light: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-stone-700 block mb-1.5">Water</label>
+                            <input
+                              className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                              placeholder="e.g. When top soil dries"
+                              value={editForm.water}
+                              onChange={(e) => setEditForm((f) => ({ ...f, water: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-stone-700 block mb-1.5">Size note (mature / height)</label>
                           <input
-                            type="checkbox"
-                            checked={editForm.potSize4}
-                            onChange={(e) => setEditForm((f) => ({ ...f, potSize4: e.target.checked }))}
-                            className="rounded border-stone-300"
+                            className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                            placeholder="Shown on SIZE card; if empty, pot sizes are listed instead"
+                            value={editForm.sizeDetail}
+                            onChange={(e) => setEditForm((f) => ({ ...f, sizeDetail: e.target.value }))}
                           />
-                          4&quot; pot
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={editForm.potSize6}
-                            onChange={(e) => setEditForm((f) => ({ ...f, potSize6: e.target.checked }))}
-                            className="rounded border-stone-300"
-                          />
-                          6&quot; pot
-                        </label>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                          <div>
+                            <label className="text-xs font-medium text-stone-700 block mb-1.5">Care level</label>
+                            <select
+                              className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
+                              value={editForm.careLevel}
+                              onChange={(e) =>
+                                setEditForm((f) => ({
+                                  ...f,
+                                  careLevel: e.target.value as "Easy" | "Moderate" | "Expert",
+                                }))
+                              }
+                            >
+                              <option value="Easy">Easy</option>
+                              <option value="Moderate">Moderate</option>
+                              <option value="Expert">Expert</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
+                            <span className="text-xs font-semibold text-stone-700">Pet safe</span>
+                            <Switch
+                              checked={editForm.petFriendly}
+                              onCheckedChange={(v) => setEditForm((f) => ({ ...f, petFriendly: v }))}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Light</label>
-                        <input
-                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                          placeholder="e.g. Bright indirect"
-                          value={editForm.light}
-                          onChange={(e) => setEditForm((f) => ({ ...f, light: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Water</label>
-                        <input
-                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                          placeholder="e.g. When top soil dries"
-                          value={editForm.water}
-                          onChange={(e) => setEditForm((f) => ({ ...f, water: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-stone-600 block mb-1.5">Size note (mature / height)</label>
-                      <input
-                        className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                        placeholder="Shown on SIZE card; if empty, pot sizes are listed instead"
-                        value={editForm.sizeDetail}
-                        onChange={(e) => setEditForm((f) => ({ ...f, sizeDetail: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                      <div>
-                        <label className="text-xs font-medium text-stone-600 block mb-1.5">Care level</label>
-                        <select
-                          className="w-full text-sm border border-stone-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-300 bg-stone-50 focus:bg-white transition-colors"
-                          value={editForm.careLevel}
-                          onChange={(e) =>
-                            setEditForm((f) => ({
-                              ...f,
-                              careLevel: e.target.value as "Easy" | "Moderate" | "Expert",
-                            }))
-                          }
-                        >
-                          <option value="Easy">Easy</option>
-                          <option value="Moderate">Moderate</option>
-                          <option value="Expert">Expert</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-stone-200 bg-stone-50">
-                        <span className="text-xs font-semibold text-stone-700">Pet safe</span>
-                        <Switch
-                          checked={editForm.petFriendly}
-                          onCheckedChange={(v) => setEditForm((f) => ({ ...f, petFriendly: v }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
 
                   <div className="border-t border-stone-100" />
 
@@ -1302,7 +1339,7 @@ export default function AdminProductsPage() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-stone-100 px-6 py-4 flex gap-3 shrink-0 bg-stone-50/60">
+            <div className="border-t border-stone-100 px-6 py-4 flex gap-3 shrink-0 bg-white">
               <button onClick={() => setEditing(null)} className="flex-1 py-2.5 text-sm font-medium rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 transition-colors">
                 Cancel
               </button>

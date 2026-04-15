@@ -13,6 +13,7 @@
     "db:push:force": "drizzle-kit push --force",
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:apply-0015": "npx tsx scripts/apply-migration-0015.ts",
+    "db:update-plant-types": "npx tsx scripts/update-plant-types.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

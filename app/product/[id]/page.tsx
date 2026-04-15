@@ -100,6 +100,14 @@ function potSizeCmHint(potLabel: string): string | null {
   return null;
 }
 
+function normalizeDescriptionHtml(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (!trimmed.includes("<")) return trimmed;
+  return trimmed;
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -520,9 +528,20 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Description */}
-            <p className="text-sm leading-relaxed text-zinc-600">
-              {product.description}
-            </p>
+            <div className="prose prose-sm max-w-none">
+              {normalizeDescriptionHtml(product.description).includes("<") ? (
+                <div
+                  className="text-sm leading-relaxed text-zinc-600 [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-zinc-800 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-zinc-800 [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-zinc-800 [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-primary-200 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-zinc-500 [&_blockquote]:my-3 [&_blockquote]:bg-primary-50/30 [&_blockquote]:py-2 [&_blockquote]:rounded-r-lg [&_a]:text-primary-600 [&_a]:underline [&_a:hover]:text-primary-700 [&_code]:bg-stone-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_code]:text-stone-700 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-xl [&_img]:my-3 [&_img]:shadow-sm [&_strong]:font-semibold [&_strong]:text-zinc-800 [&_em]:italic [&_u]:underline"
+                  dangerouslySetInnerHTML={{
+                    __html: normalizeDescriptionHtml(product.description),
+                  }}
+                />
+              ) : (
+                <p className="text-sm leading-relaxed text-zinc-600">
+                  {product.description}
+                </p>
+              )}
+            </div>
 
             {/* Pot size selector — indoor / outdoor when pot sizes configured */}
             <AnimatePresence>

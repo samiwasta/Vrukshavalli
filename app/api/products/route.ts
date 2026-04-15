@@ -84,18 +84,42 @@ export async function GET(request: Request) {
 
     // category slug → id
     if (categorySlug) {
-      const category = await db.query.categories.findFirst({
-        where: eq(categories.slug, categorySlug),
-      });
+      // Special handling for indoor-plants and outdoor-plants subcategories
+      if (categorySlug === "indoor-plants") {
+        // Find products in "plants" category with plantType = "indoor"
+        const plantsCategory = await db.query.categories.findFirst({
+          where: eq(categories.slug, "plants"),
+        });
+        
+        if (plantsCategory) {
+          conditions.push(eq(products.categoryId, plantsCategory.id));
+          conditions.push(eq(products.plantType, "indoor"));
+        }
+      } else if (categorySlug === "outdoor-plants") {
+        // Find products in "plants" category with plantType = "outdoor"
+        const plantsCategory = await db.query.categories.findFirst({
+          where: eq(categories.slug, "plants"),
+        });
+        
+        if (plantsCategory) {
+          conditions.push(eq(products.categoryId, plantsCategory.id));
+          conditions.push(eq(products.plantType, "outdoor"));
+        }
+      } else {
+        // Regular category lookup
+        const category = await db.query.categories.findFirst({
+          where: eq(categories.slug, categorySlug),
+        });
 
-      if (!category) {
-        return NextResponse.json(
-          { success: false, error: "Invalid category slug" },
-          { status: 400 }
-        );
+        if (!category) {
+          return NextResponse.json(
+            { success: false, error: "Invalid category slug" },
+            { status: 400 }
+          );
+        }
+
+        conditions.push(eq(products.categoryId, category.id));
       }
-
-      conditions.push(eq(products.categoryId, category.id));
     }
 
     // flags

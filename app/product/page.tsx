@@ -8,6 +8,8 @@ type Props = {
 
 const CATEGORIES = [
   "plants",
+  "indoor-plants",
+  "outdoor-plants", 
   "seeds",
   "pots-planters",
   "plant-care",
@@ -18,6 +20,14 @@ const CATEGORY_META: Record<string, { title: string; subtitle: string }> = {
   plants: {
     title: "Plants",
     subtitle: "Discover our curated collection of indoor & outdoor plants",
+  },
+  "indoor-plants": {
+    title: "Indoor Plants",
+    subtitle: "Beautiful plants perfect for your home and office spaces",
+  },
+  "outdoor-plants": {
+    title: "Outdoor Plants",
+    subtitle: "Stunning plants for your garden, balcony, and outdoor areas",
   },
   seeds: {
     title: "Seeds",

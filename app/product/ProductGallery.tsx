@@ -12,6 +12,8 @@ import { cn } from "@/lib/util";
 
 export const PRODUCT_CATEGORIES = [
   "plants",
+  "indoor-plants",
+  "outdoor-plants",
   "seeds",
   "pots-planters",
   "plant-care",
@@ -27,6 +29,14 @@ export const CATEGORY_INFO: Record<
   plants: {
     title: "Plants",
     subtitle: "Discover our curated collection of indoor & outdoor plants",
+  },
+  "indoor-plants": {
+    title: "Indoor Plants",
+    subtitle: "Beautiful plants perfect for your home and office spaces",
+  },
+  "outdoor-plants": {
+    title: "Outdoor Plants",
+    subtitle: "Stunning plants for your garden, balcony, and outdoor areas",
   },
   seeds: {
     title: "Seeds",
@@ -230,12 +240,19 @@ export default function ProductGallery() {
       ? plantTypeInUrl
       : null;
 
+  // Determine which plant tab should be active based on category or plantType
   const plantsTabActive: "all" | "indoor" | "outdoor" =
-    plantTypeForApi === "indoor"
+    categoryForApi === "indoor-plants" || plantTypeForApi === "indoor"
       ? "indoor"
-      : plantTypeForApi === "outdoor"
+      : categoryForApi === "outdoor-plants" || plantTypeForApi === "outdoor"
         ? "outdoor"
         : "all";
+
+  // Show plant tabs for plants, indoor-plants, or outdoor-plants categories
+  const shouldShowPlantTabs = 
+    categoryForApi === "plants" || 
+    categoryForApi === "indoor-plants" || 
+    categoryForApi === "outdoor-plants";
 
   const header = useMemo(() => {
     if (searchQuery) {
@@ -380,7 +397,7 @@ export default function ProductGallery() {
           </p>
         </div>
 
-        {categoryForApi === "plants" && (
+        {shouldShowPlantTabs && (
           <div
             className="mb-8 flex flex-wrap gap-2 border-b border-primary-100 pb-1"
             role="tablist"
@@ -399,7 +416,7 @@ export default function ProductGallery() {
               All plants
             </Link>
             <Link
-              href="/product?category=plants&plantType=indoor"
+              href="/product?category=indoor-plants"
               scroll={false}
               className={cn(
                 "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
@@ -411,7 +428,7 @@ export default function ProductGallery() {
               Indoor plants
             </Link>
             <Link
-              href="/product?category=plants&plantType=outdoor"
+              href="/product?category=outdoor-plants"
               scroll={false}
               className={cn(
                 "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
