@@ -23,6 +23,9 @@ const bricolageGrotesque = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: "Vrukshavalli",
   description: "Vrukshavalli: India's premier luxury plant ecommerce destination, delivering exquisite indoor and outdoor plants, planters, and accessories to every corner of the country. Explore our curated collections and elevate your space with rare greens. Expert plant care guides, in-depth tutorials, and personalized support empower you to nurture a thriving botanical oasis at home. Discover, purchase, and learn all about luxury plants with Vrukshavalli.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

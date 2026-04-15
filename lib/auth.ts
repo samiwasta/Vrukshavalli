@@ -16,6 +16,7 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "https://vrukshavalli.vercel.app",
     "https://vrukshavalligardenstore.com",
+    "https://www.vrukshavalligardenstore.com",
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
     ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
   ],
