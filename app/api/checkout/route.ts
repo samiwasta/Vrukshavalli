@@ -6,10 +6,36 @@ import { validateOrderStock } from "@/lib/validate-order-stock";
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID!;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY!;
-const CASHFREE_ENV =
+const CASHFREE_ORDERS_URL =
   process.env.CASHFREE_ENV === "production"
     ? "https://api.cashfree.com/pg/orders"
     : "https://sandbox.cashfree.com/pg/orders";
+
+const isCashfreeProduction = process.env.CASHFREE_ENV === "production";
+
+function getAppBaseUrl(req: Request): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+
+  const vercel = process.env.VERCEL_URL;
+  if (vercel) {
+    const host = vercel.replace(/^https?:\/\//, "");
+    return `https://${host}`;
+  }
+
+  try {
+    return new URL(req.url).origin;
+  } catch {
+    return "http://localhost:3000";
+  }
+}
+
+function httpsBaseForCashfree(baseUrl: string): string {
+  if (!isCashfreeProduction || !baseUrl.startsWith("http://")) {
+    return baseUrl;
+  }
+  return `https://${baseUrl.slice("http://".length)}`;
+}
 
 export async function POST(req: Request) {
   const user = await getCurrentUser(req);
@@ -70,14 +96,12 @@ export async function POST(req: Request) {
     "-" +
     Math.floor(Math.random() * 10000);
 
-  const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-  "http://localhost:3000";
+  const baseUrl = httpsBaseForCashfree(getAppBaseUrl(req));
 
-const orderMeta: Record<string, string> = {
-  return_url: `${baseUrl}/thankyou?order_id=${orderId}`,
-  notify_url: `${baseUrl}/api/payments/webhook`,
-};
+  const orderMeta: Record<string, string> = {
+    return_url: `${baseUrl}/thankyou?order_id=${orderId}`,
+    notify_url: `${baseUrl}/api/payments/webhook`,
+  };
 
   const payload = {
     order_id: orderId,
@@ -92,7 +116,7 @@ const orderMeta: Record<string, string> = {
     order_meta: orderMeta,
   };
 
-  const cfRes = await fetch(CASHFREE_ENV, {
+  const cfRes = await fetch(CASHFREE_ORDERS_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
