@@ -28,6 +28,10 @@ import {
   type DeliveryAddress,
   EMPTY_ADDRESS,
 } from "./useDeliveryAddress";
+import {
+  FLAT_DELIVERY_CHARGE_INR,
+  FREE_DELIVERY_MIN_SUBTOTAL_INR,
+} from "@/lib/delivery-pricing";
 import type { BagStockRow } from "@/lib/validate-order-stock";
 import { getStockLevel } from "@/lib/stock";
 import type { ApiProductListRow } from "@/lib/api-product-list-row";
@@ -180,7 +184,11 @@ export default function BagSlider() {
   const taxableAmount = Math.max(subtotal - discountAmount, 0);
   const taxAmount = taxableAmount * 0.18;
   const shippingAmount =
-    taxableAmount > 0 ? (taxableAmount >= 999 ? 0 : 79) : 0;
+    taxableAmount > 0
+      ? taxableAmount >= FREE_DELIVERY_MIN_SUBTOTAL_INR
+        ? 0
+        : FLAT_DELIVERY_CHARGE_INR
+      : 0;
   const finalTotal = taxableAmount + taxAmount + shippingAmount;
 
   const bagProductIds = new Set(items.map((i) => i.id));
@@ -973,7 +981,11 @@ export default function BagSlider() {
                           </div>
                         </div>
                         <p className="mt-2 text-[10px] text-zinc-400">
-                          Free shipping on orders above ₹999 (before tax).
+                          Free delivery on bag subtotal ₹
+                          {FREE_DELIVERY_MIN_SUBTOTAL_INR.toLocaleString("en-IN")}{" "}
+                          or more (before GST). Below that, flat ₹
+                          {FLAT_DELIVERY_CHARGE_INR.toLocaleString("en-IN")}{" "}
+                          delivery.
                         </p>
                       </div>
 

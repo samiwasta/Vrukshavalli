@@ -91,7 +91,7 @@ const CATEGORIES: Category[] = [
       },
       {
         q: "What are the shipping charges?",
-        a: "Shipping is free on orders above ₹999. A flat shipping fee is applied to smaller orders and shown clearly at checkout before payment.",
+        a: "Shipping is free when your bag subtotal (before GST) is ₹999 or more. Orders below that have a flat ₹129 delivery charge, shown clearly in your bag and at checkout before payment.",
       },
       {
         q: "My plant arrived damaged — what should I do?",

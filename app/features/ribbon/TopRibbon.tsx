@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 const RIBBON_FEATURES = [
   "Top Plant Seller in Ratnagiri",
-  "Free delivery on orders above Rs 999",
+  "Free delivery on bag orders ₹999+ · ₹129 delivery below",
   "100% organic and pesticide-free plants",
 ];
 

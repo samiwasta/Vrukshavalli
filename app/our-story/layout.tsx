@@ -13,10 +13,10 @@ export default function OurStoryLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main>
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      {children}
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
       <Footer />
-    </main>
+    </div>
   );
 }

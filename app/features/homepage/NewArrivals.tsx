@@ -78,7 +78,7 @@ export default function NewArrivals() {
         </Link>
       </div>
 
-      <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4">
+      <div className="scrollbar-hide flex items-stretch gap-4 overflow-x-auto overscroll-x-contain pb-4 [scrollbar-width:none] sm:gap-6">
         {products.length === 0 ? (
           <div className="w-full py-16 flex flex-col items-center justify-center text-muted-foreground gap-2">
             <span className="text-4xl">🌸</span>
@@ -88,13 +88,13 @@ export default function NewArrivals() {
         ) : products.map((product, index) => (
           <motion.div
             key={product.id}
-            className="w-65 sm:w-70 md:w-75 lg:w-80 shrink-0"
+            className="flex h-full w-65 shrink-0 sm:w-70 md:w-75 lg:w-80"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: index * 0.08 }}
           >
-            <ProductCard {...product} />
+            <ProductCard {...product} className="w-full" />
           </motion.div>
         ))}
       </div>

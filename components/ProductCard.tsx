@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { IconHeart, IconStar, IconStarFilled } from "@tabler/icons-react";
+import {
+  IconHeart,
+  IconMinus,
+  IconPlus,
+  IconStar,
+  IconStarFilled,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/util";
 import { useWishlist } from "@/context/WishlistContext";
@@ -55,10 +61,14 @@ export default function ProductCard({
   const stockLevel = getStockLevel(stock, stockCapacity);
   const isFavorite = wishlist.has(itemId);
   const [isHovered, setIsHovered] = useState(false);
+  const bagLine = bag.items.find((i) => i.id === itemId);
+  const qtyInBag = bagLine?.quantity ?? 0;
+  const maxQty = stock > 0 ? stock : Number.MAX_SAFE_INTEGER;
+  const atMaxQty = qtyInBag >= maxQty;
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
-    e.stopPropagation();   // ✅ prevent prop chain
-    e.preventDefault();    // ✅ prevent parent navigation
+    e.stopPropagation();
+    e.preventDefault();
     wishlist.toggle({
       id: itemId,
       slug,
@@ -78,19 +88,38 @@ export default function ProductCard({
   };
 
   const handleAddToBag = (e: React.MouseEvent) => {
-  e.stopPropagation();
-  e.preventDefault();
+    e.stopPropagation();
+    e.preventDefault();
 
-  bag.addItem({
-    id: itemId,
-    slug: slug ?? undefined,
-    name,
-    price,
-    image,
-    quantity: 1,
-    stock,
-  });
-};
+    bag.addItem({
+      id: itemId,
+      slug: slug ?? undefined,
+      name,
+      price,
+      image,
+      quantity: 1,
+      stock,
+    });
+  };
+
+  const handleDecrementBag = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!bagLine) return;
+    if (bagLine.quantity <= 1) {
+      bag.removeItem(itemId);
+    } else {
+      bag.updateQty(itemId, bagLine.quantity - 1);
+    }
+  };
+
+  const handleIncrementBag = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!bagLine) return;
+    if (atMaxQty) return;
+    bag.updateQty(itemId, bagLine.quantity + 1);
+  };
 
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
@@ -99,7 +128,7 @@ export default function ProductCard({
   return (
     <motion.div
       className={cn(
-        "group relative flex min-h-0 flex-col overflow-hidden rounded-3xl bg-white border border-primary-100/50 hover:border-primary-200 transition-all duration-500 cursor-pointer",
+        "group relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-primary-100/50 bg-white transition-all duration-500 hover:border-primary-200 cursor-pointer",
         className
       )}
       initial={{ opacity: 0, y: 20 }}
@@ -139,7 +168,6 @@ export default function ProductCard({
           transition={{ duration: 0.3 }}
         />
 
-        {/* ❤️ FIXED BUTTON */}
         <motion.button
           type="button"
           onClick={handleToggleWishlist}
@@ -172,7 +200,6 @@ export default function ProductCard({
           </motion.div>
         </motion.button>
 
-        {/* BADGES unchanged */}
       </div>
 
       <div
@@ -181,55 +208,67 @@ export default function ProductCard({
           compact ? "p-2.5 pb-3" : "p-3 sm:p-4 md:p-5",
         )}
       >
-        {category && (
-          <span
-            className={cn(
-              "mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary-600",
-              compact && "line-clamp-1",
-            )}
-          >
-            {category}
-          </span>
-        )}
+        <div
+          className={cn(
+            "mb-1 flex min-h-4 items-end",
+            compact && "min-h-3.5",
+          )}
+        >
+          {category ? (
+            <span
+              className={cn(
+                "line-clamp-1 text-[10px] font-semibold uppercase tracking-wider text-primary-600",
+              )}
+            >
+              {category}
+            </span>
+          ) : null}
+        </div>
 
         <h3
           className={cn(
             "mb-2 text-sm font-semibold leading-snug text-foreground transition-colors duration-300 group-hover:text-primary-700 sm:text-base",
             compact
-              ? "line-clamp-3 min-h-15"
-              : "line-clamp-2 min-h-[2.5em] sm:mb-3 sm:min-h-[2.25em] md:min-h-[2em]",
+              ? "line-clamp-3 min-h-[3.6rem]"
+              : "line-clamp-2 min-h-11 sm:mb-3 sm:min-h-12",
           )}
         >
           {name}
         </h3>
 
-        {/* Rating */}
-        {rating > 0 && (
-          <div className="mb-2 flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span key={star}>
-                  {star <= Math.round(rating) ? (
-                    <IconStarFilled size={12} className="text-amber-400" />
-                  ) : (
-                    <IconStar size={12} className="text-gray-300" />
-                  )}
-                </span>
-              ))}
-            </div>
-            <span className="text-[11px] text-muted-foreground font-medium">
-              {rating.toFixed(1)}
-              {reviewCount > 0 && (
-                <span className="text-gray-400"> ({reviewCount})</span>
-              )}
-            </span>
-          </div>
-        )}
+        <div
+          className={cn(
+            "mb-2 flex min-h-[22px] items-center gap-1.5",
+            compact && "min-h-[20px]",
+          )}
+        >
+          {rating > 0 ? (
+            <>
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <span key={star}>
+                    {star <= Math.round(rating) ? (
+                      <IconStarFilled size={12} className="text-amber-400" />
+                    ) : (
+                      <IconStar size={12} className="text-gray-300" />
+                    )}
+                  </span>
+                ))}
+              </div>
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {rating.toFixed(1)}
+                {reviewCount > 0 && (
+                  <span className="text-gray-400"> ({reviewCount})</span>
+                )}
+              </span>
+            </>
+          ) : null}
+        </div>
 
         <div
           className={cn(
-            "mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5",
-            compact && "mb-2.5",
+            "mb-3 flex min-h-10 flex-wrap items-baseline gap-x-2 gap-y-0.5",
+            compact && "mb-2.5 min-h-9",
           )}
         >
           <span
@@ -265,15 +304,67 @@ export default function ProductCard({
             </Link>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button
-              onClick={handleAddToBag}
-              className="h-auto min-h-9 w-full min-w-0 whitespace-normal rounded-full border-2 border-primary-600 bg-primary-600 px-3 py-2 text-center text-xs font-semibold leading-tight text-white shadow-md transition-all duration-300 hover:border-primary-700 hover:bg-primary-700 hover:shadow-lg sm:text-sm"
-              size="sm"
+          {qtyInBag > 0 ? (
+            <div
+              className={cn(
+                "flex h-9 min-h-9 w-full min-w-0 overflow-hidden rounded-full border-2 border-primary-600 bg-primary-600 shadow-md",
+                compact && "h-8 min-h-8",
+              )}
+              onClick={(e) => e.stopPropagation()}
             >
-              Add to Bag
-            </Button>
-          </motion.div>
+              <button
+                type="button"
+                onClick={handleDecrementBag}
+                className="flex flex-1 items-center justify-center text-white transition-colors hover:bg-primary-700 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                aria-label="Decrease quantity in bag"
+              >
+                <IconMinus
+                  size={compact ? 15 : 17}
+                  stroke={2.25}
+                  aria-hidden
+                />
+              </button>
+              <span
+                className={cn(
+                  "flex min-w-8 shrink-0 items-center justify-center border-x border-primary-500/35 font-mono text-sm font-bold tabular-nums text-white select-none sm:min-w-9 sm:text-base",
+                  compact && "min-w-7 text-xs sm:min-w-8",
+                )}
+                aria-live="polite"
+              >
+                {qtyInBag}
+              </span>
+              <button
+                type="button"
+                onClick={handleIncrementBag}
+                disabled={atMaxQty}
+                className={cn(
+                  "flex flex-1 items-center justify-center text-white transition-colors hover:bg-primary-700 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+                  atMaxQty && "cursor-not-allowed opacity-40 hover:bg-primary-600",
+                )}
+                aria-label={
+                  atMaxQty
+                    ? "Maximum quantity reached"
+                    : "Increase quantity in bag"
+                }
+              >
+                <IconPlus
+                  size={compact ? 15 : 17}
+                  stroke={2.25}
+                  aria-hidden
+                />
+              </button>
+            </div>
+          ) : (
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={handleAddToBag}
+                className="h-auto min-h-9 w-full min-w-0 whitespace-normal rounded-full border-2 border-primary-600 bg-primary-600 px-3 py-2 text-center text-xs font-semibold leading-tight text-white shadow-md transition-all duration-300 hover:border-primary-700 hover:bg-primary-700 hover:shadow-lg sm:text-sm"
+                size="sm"
+              >
+                Add to Bag
+              </Button>
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>

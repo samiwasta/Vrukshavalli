@@ -30,6 +30,7 @@ import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import { useBag } from "@/context/BagContext";
 import { getStockLevel } from "@/lib/stock";
+import { FREE_DELIVERY_MIN_SUBTOTAL_INR } from "@/lib/delivery-pricing";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -779,7 +780,10 @@ export default function ProductDetailPage() {
             {/* Trust Badges */}
             <div className="flex flex-wrap gap-4 border-t border-primary-100 pt-5">
               {[
-                { icon: IconTruckDelivery, text: "Free delivery above ₹499" },
+                {
+                  icon: IconTruckDelivery,
+                  text: `Free delivery on orders ₹${FREE_DELIVERY_MIN_SUBTOTAL_INR.toLocaleString("en-IN")}+`,
+                },
                 { icon: IconShieldCheck, text: "Plant health guarantee" },
                 { icon: IconRefresh, text: "7-day easy returns" },
               ].map((badge) => (

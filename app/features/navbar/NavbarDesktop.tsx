@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -10,6 +16,7 @@ import SearchBar from "@/components/SearchBar";
 import { useWishlist } from "@/context/WishlistContext";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useBag } from "@/context/BagContext";
+import { cn } from "@/lib/util";
 
 interface NavItem {
   label: string;
@@ -59,10 +66,26 @@ const actionIcons = [
   { href: "/wishlist", label: "Wishlist", icon: IconHeart },
 ] as const;
 
+const SCROLL_TOP_SHOW_LINKS_PX = 80;
+/** Cumulative px in one direction before toggling (small scrolls still count). */
+const SCROLL_ACCUM_SHOW_PX = 5;
+const SCROLL_ACCUM_HIDE_PX = 5;
+/** Ignore scroll-driven toggles while header height animates (avoids layout-shift feedback). */
+const LAYOUT_COOLDOWN_MS = 380;
+
 export default function NavbarDesktop() {
   const [hovered, setHovered] = useState<number | null>(null);
   const [hoveredAction, setHoveredAction] = useState<number | null>(null);
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
+  const [navLinksVisible, setNavLinksVisible] = useState(true);
+  const [navLinksHeight, setNavLinksHeight] = useState(0);
+  const lastScrollY = useRef(0);
+  const scrollAccumRef = useRef(0);
+  const lastScrollDirRef = useRef<"up" | "down" | null>(null);
+  const navLinksVisibleRef = useRef(true);
+  const ignoreScrollUntilRef = useRef(0);
+  const rafScrollId = useRef<number | null>(null);
+  const navLinksInnerRef = useRef<HTMLDivElement>(null);
   const userPopoverRef = useRef<HTMLDivElement>(null);
   const { items: wishlistItems } = useWishlist();
   const { data: session } = useSession();
@@ -89,9 +112,104 @@ export default function NavbarDesktop() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [userPopoverOpen]);
 
+  useLayoutEffect(() => {
+    const el = navLinksInnerRef.current;
+    if (!el) return;
+    const sync = () => setNavLinksHeight(el.scrollHeight);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const setNavLinksVisibleStable = useCallback((next: boolean) => {
+    if (navLinksVisibleRef.current === next) return;
+    navLinksVisibleRef.current = next;
+    setNavLinksVisible(next);
+    ignoreScrollUntilRef.current = Date.now() + LAYOUT_COOLDOWN_MS;
+  }, []);
+
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+    navLinksVisibleRef.current = true;
+
+    const runScrollLogic = () => {
+      rafScrollId.current = null;
+      const y = window.scrollY;
+      const now = Date.now();
+
+      if (now < ignoreScrollUntilRef.current) {
+        lastScrollY.current = y;
+        scrollAccumRef.current = 0;
+        lastScrollDirRef.current = null;
+        return;
+      }
+
+      if (y < SCROLL_TOP_SHOW_LINKS_PX) {
+        scrollAccumRef.current = 0;
+        lastScrollDirRef.current = null;
+        lastScrollY.current = y;
+        setNavLinksVisibleStable(true);
+        return;
+      }
+
+      const delta = y - lastScrollY.current;
+      lastScrollY.current = y;
+
+      if (Math.abs(delta) < 0.5) return;
+
+      if (delta > 0) {
+        if (!navLinksVisibleRef.current) {
+          scrollAccumRef.current = 0;
+          lastScrollDirRef.current = null;
+          return;
+        }
+        if (lastScrollDirRef.current !== "down") {
+          scrollAccumRef.current = 0;
+          lastScrollDirRef.current = "down";
+        }
+        scrollAccumRef.current += delta;
+        if (scrollAccumRef.current >= SCROLL_ACCUM_HIDE_PX) {
+          scrollAccumRef.current = 0;
+          lastScrollDirRef.current = null;
+          setNavLinksVisibleStable(false);
+        }
+      } else {
+        if (navLinksVisibleRef.current) {
+          scrollAccumRef.current = 0;
+          lastScrollDirRef.current = null;
+          return;
+        }
+        if (lastScrollDirRef.current !== "up") {
+          scrollAccumRef.current = 0;
+          lastScrollDirRef.current = "up";
+        }
+        scrollAccumRef.current += -delta;
+        if (scrollAccumRef.current >= SCROLL_ACCUM_SHOW_PX) {
+          scrollAccumRef.current = 0;
+          lastScrollDirRef.current = null;
+          setNavLinksVisibleStable(true);
+        }
+      }
+    };
+
+    const onScroll = () => {
+      if (rafScrollId.current != null) return;
+      rafScrollId.current = window.requestAnimationFrame(runScrollLogic);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafScrollId.current != null) {
+        window.cancelAnimationFrame(rafScrollId.current);
+      }
+    };
+  }, [setNavLinksVisibleStable]);
+
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="container mx-auto flex flex-col items-center justify-between gap-8 px-4 py-4">
+    <nav className="bg-white">
+      <div className="container mx-auto flex flex-col items-center justify-between px-4 py-4">
         <div className="flex w-full items-center justify-between gap-4">
           <Link href="/">
             <Image src="/vrukshavalli-logo.svg" alt="Vrukshavalli Logo" width={150} height={40} />
@@ -238,35 +356,63 @@ export default function NavbarDesktop() {
         </div>
 
         <motion.div
-          onMouseLeave={() => setHovered(null)}
-          className="flex flex-1 flex-row items-center justify-center gap-2 text-sm font-medium text-primary-500"
+          layout={false}
+          className={cn(
+            "w-full overflow-hidden",
+            !navLinksVisible && "pointer-events-none",
+          )}
+          initial={false}
+          animate={{
+            height: navLinksVisible ? navLinksHeight : 0,
+            opacity: navLinksVisible ? 1 : 0,
+          }}
+          transition={{
+            height: {
+              duration: 0.34,
+              ease: [0.25, 0.1, 0.25, 1],
+            },
+            opacity: {
+              duration: navLinksVisible ? 0.24 : 0.16,
+              ease: "easeOut",
+            },
+          }}
+          aria-hidden={!navLinksVisible}
         >
-          {navItems.map((item, idx) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onMouseEnter={() => setHovered(idx)}
-              className="relative px-4 py-2 text-primary-500 font-sans"
+          <div ref={navLinksInnerRef} className="pt-8">
+            <motion.div
+              onMouseLeave={() => setHovered(null)}
+              className="flex flex-1 flex-row flex-wrap items-center justify-center gap-2 text-sm font-medium text-primary-500"
             >
-              {hovered === idx && (
-                <motion.div
-                  layoutId="hovered"
-                  className="absolute inset-0 h-full w-full rounded-full bg-primary-100"
-                  transition={{
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 30,
-                  }}
-                />
-              )}
-              <span className={`relative z-20 flex items-center gap-1.5 ${
-                item.icon ? "font-semibold text-amber-600" : ""
-              }`}>
-                {item.icon && <item.icon size={13} stroke={2} />}
-                {item.label}
-              </span>
-            </Link>
-          ))}
+              {navItems.map((item, idx) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onMouseEnter={() => setHovered(idx)}
+                  className="relative px-4 py-2 font-sans text-primary-500"
+                >
+                  {hovered === idx && (
+                    <motion.div
+                      layoutId="hovered"
+                      className="absolute inset-0 h-full w-full rounded-full bg-primary-100"
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                  <span
+                    className={`relative z-20 flex items-center gap-1.5 ${
+                      item.icon ? "font-semibold text-amber-600" : ""
+                    }`}
+                  >
+                    {item.icon && <item.icon size={13} stroke={2} />}
+                    {item.label}
+                  </span>
+                </Link>
+              ))}
+            </motion.div>
+          </div>
         </motion.div>
       </div>
     </nav>

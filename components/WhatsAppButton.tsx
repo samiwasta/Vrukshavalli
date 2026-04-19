@@ -18,7 +18,7 @@ export default function WhatsAppButton() {
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-40">
       {/* Label pill — absolutely positioned to the left of the button */}
       <AnimatePresence>
         {hovered && (

@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 
 export default function VrukshaAILayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      {children}
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
       <Footer />
-    </>
+    </div>
   );
 }

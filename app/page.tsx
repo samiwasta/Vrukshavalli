@@ -15,21 +15,22 @@ import Footer from "./features/footer/Footer";
 
 export default function Home() {
   return (
-    <main>
-      <TopRibbon />
-      <Navbar />
-      <Hero />
-      <Features />
-      <CategoryBanners />
-      <BestSellers />
-      <ImageBento />
-      <HandPicked />
-      <NewArrivals />
-      <CourseBanner />
-      <Ceramics />
-      <Testimonials />
-      <CTA />
+    <div className="flex min-h-screen flex-col">
+      <Navbar topSlot={<TopRibbon />} />
+      <main className="flex min-h-0 flex-1 flex-col">
+        <Hero />
+        <Features />
+        <CategoryBanners />
+        <BestSellers />
+        <ImageBento />
+        <HandPicked />
+        <NewArrivals />
+        <CourseBanner />
+        <Ceramics />
+        <Testimonials />
+        <CTA />
+      </main>
       <Footer />
-    </main>
+    </div>
   );
 }

@@ -388,8 +388,8 @@ export default function TermsPage() {
                 lineClass="bg-sky-100" delay={0.15}>
                 <BulletList dotClass="bg-sky-400"
                   items={[
-                    "Shipping charges are calculated at checkout based on your location and the total order weight.",
-                    "Any applicable free shipping offers will be clearly communicated and applied automatically.",
+                    "Delivery is free when your bag subtotal (after any coupon, before GST) is ₹999 or more.",
+                    "For bag subtotals below ₹999, a flat ₹129 delivery charge applies and is shown in your bag and at checkout before you pay.",
                   ]}
                 />
               </Clause>

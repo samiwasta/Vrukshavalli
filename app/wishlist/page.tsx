@@ -37,11 +37,11 @@ export default function WishlistPage() {
         </motion.div>
 
         {items.length > 0 ? (
-          <div className="grid grid-cols-1 min-[425px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 min-[425px]:gap-5 md:gap-6">
+          <div className="grid grid-cols-1 min-[425px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 min-[425px]:gap-5 md:gap-6 items-stretch">
             {items.map((product, index) => (
               <motion.div
                 key={product.id}
-                className="min-w-0"
+                className="h-full min-w-0"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05, duration: 0.4 }}

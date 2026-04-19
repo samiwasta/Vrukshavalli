@@ -9,11 +9,10 @@ export const metadata = {
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main>
-      <TopRibbon />
-      <Navbar />
-      {children}
+    <div className="flex min-h-screen flex-col">
+      <Navbar topSlot={<TopRibbon />} />
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
       <Footer />
-    </main>
+    </div>
   );
 }

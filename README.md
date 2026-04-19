@@ -270,7 +270,7 @@ vrukshavalli/
 ### Shopping Bag & Checkout
 - Slide-in bag panel — quantity stepper, item remove
 - Coupon validation against real DB; supports percentage and flat ₹ off; new-users-only restriction
-- Tax (GST 18%) and shipping (₹79; free above ₹999) calculated live
+- Tax (GST 18%) and shipping (flat ₹129; free bag subtotal ₹999+ before GST) calculated live
 - Delivery address from saved addresses API (`useDeliveryAddress`); validation before pay
 - **Cashfree Payments** — `POST /api/checkout` creates a Cashfree order; client opens Cashfree checkout; `POST /api/payments/webhook` updates order payment status (configure webhook URL in Cashfree dashboard)
 - Thank-you page loads order by id after successful payment
