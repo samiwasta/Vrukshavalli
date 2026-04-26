@@ -14,6 +14,7 @@ const CATEGORIES = [
   "pots-planters",
   "plant-care",
   "gifting",
+  "farm-fresh",
 ] as const;
 
 const CATEGORY_META: Record<string, { title: string; subtitle: string }> = {
@@ -44,6 +45,10 @@ const CATEGORY_META: Record<string, { title: string; subtitle: string }> = {
   gifting: {
     title: "Gifting",
     subtitle: "Thoughtfully curated plant gifts for loved ones",
+  },
+  "farm-fresh": {
+    title: "Farm Fresh",
+    subtitle: "Fresh from the farm — fruits, vegetables, and organic produce",
   },
 };
 

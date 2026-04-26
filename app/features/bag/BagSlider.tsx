@@ -36,6 +36,17 @@ import type { BagStockRow } from "@/lib/validate-order-stock";
 import { getStockLevel } from "@/lib/stock";
 import type { ApiProductListRow } from "@/lib/api-product-list-row";
 
+function roundMoney(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+function formatINR(n: number): string {
+  return roundMoney(n).toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function BagSlider() {
   const { isBagOpen, closeBag, items, removeItem, updateQty, addItem } =
     useBag();
@@ -176,20 +187,21 @@ export default function BagSlider() {
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
-  const discountAmount = appliedCoupon
+  const rawDiscount = appliedCoupon
     ? appliedCoupon.discountType === "flat"
       ? Math.min(appliedCoupon.discountValue, subtotal)
       : (subtotal * appliedCoupon.discountValue) / 100
     : 0;
-  const taxableAmount = Math.max(subtotal - discountAmount, 0);
-  const taxAmount = taxableAmount * 0.18;
+  const discountAmount = roundMoney(rawDiscount);
+  const taxableAmount = roundMoney(Math.max(subtotal - discountAmount, 0));
+  const taxAmount = roundMoney(taxableAmount * 0.18);
   const shippingAmount =
     taxableAmount > 0
       ? taxableAmount >= FREE_DELIVERY_MIN_SUBTOTAL_INR
         ? 0
         : FLAT_DELIVERY_CHARGE_INR
       : 0;
-  const finalTotal = taxableAmount + taxAmount + shippingAmount;
+  const finalTotal = roundMoney(taxableAmount + taxAmount + shippingAmount);
 
   const bagProductIds = new Set(items.map((i) => i.id));
   const recommendedFiltered = recommendedProducts
@@ -211,8 +223,8 @@ export default function BagSlider() {
     return;
   }
 
-  if (!/^[A-Z0-9]{4,12}$/.test(normalizedCode)) {
-    setCouponError("Coupon must be 4-12 letters or numbers.");
+  if (!/^[A-Z0-9]{2,32}$/.test(normalizedCode)) {
+    setCouponError("Coupon must be 2–32 letters or numbers.");
     setCouponSuccess("");
     return;
   }
@@ -253,7 +265,9 @@ export default function BagSlider() {
     });
 
     const discountLabel =
-      discountType === "flat" ? `₹${discountValue} off` : `${discountValue}% off`;
+      discountType === "flat"
+        ? `₹${formatINR(discountValue)} off`
+        : `${discountValue}% off`;
     setCouponSuccess(`Coupon ${normalizedCode} applied: ${discountLabel}.`);
   } catch (error) {
     console.error("Coupon apply error:", error);
@@ -437,7 +451,7 @@ export default function BagSlider() {
                     {p.name}
                   </p>
                   <p className="mt-1 font-mono text-xs font-bold text-primary-700">
-                    ₹{p.price.toLocaleString("en-IN")}
+                    ₹{formatINR(p.price)}
                   </p>
                   <button
                     type="button"
@@ -739,9 +753,7 @@ export default function BagSlider() {
 
                                   <p className="text-sm font-bold text-zinc-900">
                                     ₹
-                                    {(
-                                      item.price * item.quantity
-                                    ).toLocaleString("en-IN")}
+                                    {formatINR(item.price * item.quantity)}
                                   </p>
                                 </div>
                               </div>
@@ -930,7 +942,7 @@ export default function BagSlider() {
                               animate={{ opacity: 1, y: 0 }}
                               className="font-semibold text-zinc-900"
                             >
-                              ₹{subtotal.toLocaleString("en-IN")}
+                              ₹{formatINR(subtotal)}
                             </motion.span>
                           </div>
                           {appliedCoupon && discountAmount > 0 && (
@@ -940,7 +952,7 @@ export default function BagSlider() {
                                   Discount ({appliedCoupon.code})
                                 </span>
                                 <span className="font-semibold text-emerald-700">
-                                  -₹{discountAmount.toLocaleString("en-IN")}
+                                  -₹{formatINR(discountAmount)}
                                 </span>
                               </div>
                               {appliedCoupon.description && (
@@ -953,7 +965,7 @@ export default function BagSlider() {
                           <div className="flex items-center justify-between">
                             <span className="text-zinc-500">GST (18%)</span>
                             <span className="font-semibold text-zinc-900">
-                              ₹{taxAmount.toLocaleString("en-IN")}
+                              ₹{formatINR(taxAmount)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -961,7 +973,7 @@ export default function BagSlider() {
                             <span className="font-semibold text-zinc-900">
                               {shippingAmount === 0
                                 ? "Free"
-                                : `₹${shippingAmount.toLocaleString("en-IN")}`}
+                                : `₹${formatINR(shippingAmount)}`}
                             </span>
                           </div>
                           <div className="border-t border-zinc-200/80 pt-2">
@@ -975,7 +987,7 @@ export default function BagSlider() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="font-mono text-base font-bold text-zinc-900"
                               >
-                                ₹{finalTotal.toLocaleString("en-IN")}
+                                ₹{formatINR(finalTotal)}
                               </motion.span>
                             </div>
                           </div>
@@ -1013,14 +1025,14 @@ export default function BagSlider() {
                           animate={{ opacity: 1 }}
                           className="font-mono text-xl font-bold text-zinc-900"
                         >
-                          ₹{finalTotal.toLocaleString("en-IN")}
+                          ₹{formatINR(finalTotal)}
                         </motion.p>
                       </div>
                       <p className="max-w-[48%] text-right text-[10px] leading-snug text-zinc-400">
                         Incl. GST ·{" "}
                         {shippingAmount === 0
                           ? "Delivery free"
-                          : `+₹${shippingAmount.toLocaleString("en-IN")} delivery`}
+                          : `+₹${formatINR(shippingAmount)} delivery`}
                       </p>
                     </div>
                     {isSignedIn ? (
@@ -1431,7 +1443,7 @@ export default function BagSlider() {
                       availableCoupons.map((coupon) => {
                         const discountLabel =
                           coupon.discountType === "flat"
-                            ? `₹${coupon.discountPct} off`
+                            ? `₹${formatINR(coupon.discountPct)} off`
                             : `${coupon.discountPct}% off`;
                         const isAlreadyApplied =
                           appliedCoupon?.code === coupon.code;

@@ -51,6 +51,10 @@ const navItems: NavItem[] = [
     href: "/garden-services",
   },
   {
+    label: "FARM FRESH",
+    href: "/product?category=farm-fresh",
+  },
+  {
     label: "VRUKSHA AI",
     href: "/vruksha-ai",
     icon: IconSparkles,

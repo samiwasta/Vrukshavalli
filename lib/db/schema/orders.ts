@@ -33,7 +33,9 @@ export const orders = pgTable("orders", {
   .notNull(),
   items: jsonb("items").notNull(), // Array of {productId, name, price, quantity, image}
   notes: text("notes"),
-    cashfreeOrderId: text("cashfree_order_id"),
+  couponCode: text("coupon_code"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
+  cashfreeOrderId: text("cashfree_order_id"),
 
   paymentSessionId: text("payment_session_id"),
 

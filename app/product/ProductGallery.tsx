@@ -18,6 +18,7 @@ export const PRODUCT_CATEGORIES = [
   "pots-planters",
   "plant-care",
   "gifting",
+  "farm-fresh",
 ] as const;
 
 export type ProductCategorySlug = (typeof PRODUCT_CATEGORIES)[number];
@@ -53,6 +54,10 @@ export const CATEGORY_INFO: Record<
   gifting: {
     title: "Gifting",
     subtitle: "Thoughtfully curated plant gifts for loved ones",
+  },
+  "farm-fresh": {
+    title: "Farm Fresh",
+    subtitle: "Fresh from the farm - fruits, vegetables, and organic produce",
   },
 };
 

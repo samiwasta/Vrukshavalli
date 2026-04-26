@@ -25,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "PLANT CARE", href: "/product?category=plant-care" },
   { label: "GIFTING", href: "/product?category=gifting" },
   { label: "GARDEN SERVICES", href: "/garden-services" },
+  { label: "FARM FRESH", href: "/product?category=farm-fresh" },
   { label: "VRUKSHA AI", href: "/vruksha-ai", icon: IconSparkles },
   { label: "COURSES", href: "https://learn.vrukshavalligardenstore.com", target: "_blank" },
 ];

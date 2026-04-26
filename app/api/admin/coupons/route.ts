@@ -6,7 +6,12 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { z } from "zod";
 
 const createCouponSchema = z.object({
-  code: z.string().min(2).max(32).transform((s) => s.toUpperCase()),
+  code: z
+    .string()
+    .min(2)
+    .max(32)
+    .regex(/^[a-zA-Z0-9]+$/, "Code must contain only letters and numbers")
+    .transform((s) => s.toUpperCase()),
   discountType: z.enum(["percentage", "flat"]).default("percentage"),
   discountPct: z.number().int().min(1),
   description: z.string().max(200).optional().nullable(),

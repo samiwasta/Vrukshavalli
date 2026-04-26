@@ -17,6 +17,7 @@ async function seed() {
       { name: "Pots & Planters", slug: "pots-planters", image: "/category-ceramics.webp" },
       { name: "Plant Care", slug: "plant-care", image: "/category-care.webp" },
       { name: "Gifting", slug: "gifting", image: "/category-plant.webp" },
+      { name: "Farm Fresh", slug: "farm-fresh", image: "/category-plant.webp" },
     ])
     .onConflictDoNothing();
 

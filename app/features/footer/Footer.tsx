@@ -9,6 +9,7 @@ const footerLinks = {
     { label: "Pots & Planters", href: "/product?category=pots-planters" },
     { label: "Plant Care", href: "/product?category=plant-care" },
     { label: "Gifting", href: "/product?category=gifting" },
+    { label: "Farm Fresh", href: "/product?category=farm-fresh" },
     { label: "New Arrivals", href: "/product?category=plants" },
   ],
   company: [

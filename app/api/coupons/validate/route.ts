@@ -3,10 +3,10 @@ import { db } from "@/lib/db";
 import { coupons, orders } from "@/lib/db/schema";
 import { eq, sql, count } from "drizzle-orm";
 import { z } from "zod";
-import { getSession } from "@/lib/session";
+import { getCurrentUser } from "@/lib/current-user";
 
 const bodySchema = z.object({
-  code: z.string().min(4).max(12),
+  code: z.string().min(2).max(32),
 });
 
 export async function POST(request: Request) {
@@ -60,10 +60,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // New-users-only check
     if (coupon.newUsersOnly) {
-      const session = await getSession(request);
-      if (!session?.user) {
+      const user = await getCurrentUser(request);
+      if (!user) {
         return NextResponse.json({
           success: true,
           data: { valid: false, reason: "Please log in to use this coupon." },
@@ -72,7 +71,7 @@ export async function POST(request: Request) {
       const [{ total }] = await db
         .select({ total: count() })
         .from(orders)
-        .where(eq(orders.userId, session.user.id));
+        .where(eq(orders.userId, user.id));
       if (total > 0) {
         return NextResponse.json({
           success: true,

@@ -11,7 +11,7 @@ export default function WhatsAppButton() {
   const pathname = usePathname();
   const [hovered, setHovered] = useState(false);
 
-  if (pathname?.startsWith("/admin")) {
+  if (pathname?.startsWith("/admin") || pathname === "/login") {
     return null;
   }
 

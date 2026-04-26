@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema/orders";
-import { and, eq } from "drizzle-orm";
+import { coupons } from "@/lib/db/schema/coupons";
+import { and, eq, sql } from "drizzle-orm";
 import { verifyCashfreeWebhookSignature } from "@/lib/cashfree-webhook-verify";
 import { deductOrderStock } from "@/lib/deduct-order-stock";
 
@@ -99,10 +100,17 @@ export async function POST(req: Request) {
           updatedAt: new Date(),
         })
         .where(and(eq(orders.id, orderId), eq(orders.paymentStatus, "pending")))
-        .returning({ items: orders.items });
+        .returning({ items: orders.items, couponCode: orders.couponCode });
 
       if (updated) {
         await deductOrderStock(updated.items);
+
+        if (updated.couponCode) {
+          await db
+            .update(coupons)
+            .set({ usedCount: sql`${coupons.usedCount} + 1` })
+            .where(sql`upper(${coupons.code}) = ${updated.couponCode}`);
+        }
       }
 
       return NextResponse.json({ ok: true });
