@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { db, categories } from "@/lib/db";
-import { insertCategorySchema } from "@/lib/db/schema/categories";
 import { getCurrentUser } from "@/lib/current-user";
+import {
+  categoryPayloadSchema,
+  categoryValuesForDb,
+} from "@/lib/category-payload";
 
 // 🌐 GET all categories (public)
 export async function GET() {
@@ -45,7 +48,6 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    // ✅ auto-generate slug
     const generatedSlug =
       body.slug ??
       body.name
@@ -54,12 +56,10 @@ export async function POST(request: Request) {
         .replace(/[^a-z0-9\s-]/g, "")
         .replace(/\s+/g, "-");
 
-    const payload = {
+    const parsed = categoryPayloadSchema.safeParse({
       ...body,
       slug: generatedSlug,
-    };
-
-    const parsed = insertCategorySchema.safeParse(payload);
+    });
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -74,7 +74,12 @@ export async function POST(request: Request) {
 
     const [newCategory] = await db
       .insert(categories)
-      .values(parsed.data)
+      .values(
+        categoryValuesForDb({
+          ...parsed.data,
+          slug: generatedSlug,
+        }),
+      )
       .returning();
 
     return NextResponse.json(

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { db, categories, products } from "@/lib/db";
 import { getCurrentUser } from "@/lib/current-user";
-import { insertCategorySchema } from "@/lib/db/schema/categories";
+import {
+  categoryPayloadSchema,
+  categoryValuesForDb,
+} from "@/lib/category-payload";
 import { eq, count } from "drizzle-orm";
 
 // ✏️ PATCH — update category
@@ -30,9 +33,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const partialSchema = insertCategorySchema.partial();
-
-    const parsed = partialSchema.safeParse(body);
+    const parsed = categoryPayloadSchema.partial().safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -45,10 +46,29 @@ export async function PATCH(
       );
     }
 
-    const updatedData = {
-      ...parsed.data,
+    const patch = parsed.data;
+    const updatedData: Record<string, unknown> = {
       updatedAt: new Date(),
     };
+
+    if (patch.name !== undefined) updatedData.name = patch.name;
+    if (patch.slug !== undefined) updatedData.slug = patch.slug;
+    if (patch.description !== undefined)
+      updatedData.description = patch.description ?? null;
+    if (patch.image !== undefined) updatedData.image = patch.image ?? null;
+
+    if (patch.applyDeliveryCharge !== undefined) {
+      updatedData.applyDeliveryCharge = patch.applyDeliveryCharge;
+      if (!patch.applyDeliveryCharge) {
+        updatedData.deliveryFee = null;
+      } else if (patch.deliveryFee !== undefined) {
+        updatedData.deliveryFee =
+          patch.deliveryFee != null ? patch.deliveryFee.toFixed(2) : null;
+      }
+    } else if (patch.deliveryFee !== undefined) {
+      updatedData.deliveryFee =
+        patch.deliveryFee != null ? patch.deliveryFee.toFixed(2) : null;
+    }
 
     const [updatedCategory] = await db
       .update(categories)

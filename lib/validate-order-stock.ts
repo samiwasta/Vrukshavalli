@@ -92,6 +92,7 @@ export async function validateOrderStock(
 export type BagStockRow = {
   inputId: string;
   productId: string | null;
+  categoryId: string | null;
   name: string;
   stock: number;
   stockCapacity: number | null;
@@ -118,6 +119,7 @@ export async function snapshotBagStockLines(
       out.push({
         inputId: key,
         productId: null,
+        categoryId: null,
         name: "",
         stock: 0,
         stockCapacity: null,
@@ -146,6 +148,7 @@ export async function snapshotBagStockLines(
     out.push({
       inputId: key,
       productId: product.id,
+      categoryId: product.categoryId ?? null,
       name: product.name,
       stock,
       stockCapacity: product.stockCapacity ?? null,

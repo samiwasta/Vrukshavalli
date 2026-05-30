@@ -13,6 +13,7 @@ import {
   IconLeaf,
   IconSpray,
   IconLogout,
+  IconCategory,
 } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: IconLayoutDashboard, exact: true },
   { href: "/admin/orders", label: "Orders", icon: IconShoppingBag },
   { href: "/admin/products", label: "Products", icon: IconLeaf },
+  { href: "/admin/categories", label: "Categories", icon: IconCategory },
   { href: "/admin/users", label: "Users", icon: IconUsers },
   { href: "/admin/coupons", label: "Coupons", icon: IconTag },
   { href: "/admin/contact", label: "Contact", icon: IconMessage },

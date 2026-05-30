@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema/orders";
 import { coupons } from "@/lib/db/schema/coupons";
 import { validateOrderStock } from "@/lib/validate-order-stock";
+import { computeCheckoutShipping } from "@/lib/checkout-shipping";
 import { sql, eq, count } from "drizzle-orm";
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID!;
@@ -48,7 +49,13 @@ export async function POST(req: Request) {
 
   const body = await req.json();
 
-  const { items, shippingAddress, total, couponCode: rawCouponCode, discount: clientDiscount } = body;
+  const {
+    items,
+    shippingAddress,
+    total: clientTotal,
+    discount: clientDiscount,
+    couponCode: rawCouponCode,
+  } = body;
 
   if (!items?.length) {
     return NextResponse.json(
@@ -125,6 +132,27 @@ export async function POST(req: Request) {
     }
   }
 
+  const subtotal = (items as { price?: number; quantity?: number }[]).reduce(
+    (sum, row) => sum + Number(row.price ?? 0) * Math.max(0, Number(row.quantity) || 0),
+    0,
+  );
+  const discount = validatedDiscountAmount ?? Math.max(0, Number(clientDiscount) || 0);
+  const taxableAmount = Math.max(subtotal - discount, 0);
+  const productIds = stockLines.map((l: { productId: string }) => l.productId);
+  const shippingAmount = await computeCheckoutShipping(productIds, taxableAmount);
+  const taxAmount = taxableAmount * 0.18;
+  const serverTotal = parseFloat(
+    (taxableAmount + taxAmount + shippingAmount).toFixed(2),
+  );
+
+  const clientTotalNum = parseFloat(Number(clientTotal).toFixed(2));
+  if (Math.abs(serverTotal - clientTotalNum) > 0.02) {
+    return NextResponse.json(
+      { success: false, error: "Order total changed. Refresh your bag and try again." },
+      { status: 409 },
+    );
+  }
+
   const orderId = crypto.randomUUID();
 
   const orderNumber =
@@ -142,7 +170,7 @@ export async function POST(req: Request) {
 
   const payload = {
     order_id: orderId,
-    order_amount: parseFloat(Number(total).toFixed(2)),
+    order_amount: serverTotal,
     order_currency: "INR",
     customer_details: {
       customer_id: user.id,
@@ -184,7 +212,7 @@ export async function POST(req: Request) {
     status: "pending",
     paymentStatus: "pending",
     paymentMethod: "cashfree",
-    totalAmount: total.toString(),
+    totalAmount: serverTotal.toFixed(2),
     shippingAddress,
     items,
     paymentSessionId,

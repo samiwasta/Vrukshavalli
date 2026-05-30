@@ -31,6 +31,8 @@ import {
 import {
   FLAT_DELIVERY_CHARGE_INR,
   FREE_DELIVERY_MIN_SUBTOTAL_INR,
+  buildCategoryDeliveryMap,
+  computeBagShipping,
 } from "@/lib/delivery-pricing";
 import type { BagStockRow } from "@/lib/validate-order-stock";
 import { getStockLevel } from "@/lib/stock";
@@ -104,6 +106,27 @@ export default function BagSlider() {
     }[]
   >([]);
   const [recommendedLoading, setRecommendedLoading] = useState(false);
+  const [categoryDeliveryMap, setCategoryDeliveryMap] = useState(
+    () => new Map<string, { applyDeliveryCharge: boolean; deliveryFee: number | null }>(),
+  );
+
+  useEffect(() => {
+    if (!isBagOpen) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/categories");
+        const json = await res.json();
+        if (!json.success || cancelled) return;
+        setCategoryDeliveryMap(buildCategoryDeliveryMap(json.data ?? []));
+      } catch {
+        if (!cancelled) setCategoryDeliveryMap(new Map());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isBagOpen]);
 
   const fetchAvailableCoupons = async () => {
     if (availableCoupons.length > 0) return; // already loaded
@@ -195,13 +218,20 @@ export default function BagSlider() {
   const discountAmount = roundMoney(rawDiscount);
   const taxableAmount = roundMoney(Math.max(subtotal - discountAmount, 0));
   const taxAmount = roundMoney(taxableAmount * 0.18);
-  const shippingAmount =
-    taxableAmount > 0
-      ? taxableAmount >= FREE_DELIVERY_MIN_SUBTOTAL_INR
-        ? 0
-        : FLAT_DELIVERY_CHARGE_INR
-      : 0;
+  const bagCategoryIds = items.map(
+    (_, idx) => stockCheck.rows[idx]?.categoryId ?? null,
+  );
+  const shippingAmount = roundMoney(
+    computeBagShipping(taxableAmount, bagCategoryIds, categoryDeliveryMap),
+  );
   const finalTotal = roundMoney(taxableAmount + taxAmount + shippingAmount);
+  const deliveryExemptOnly =
+    items.length > 0 &&
+    bagCategoryIds.every((id) => {
+      if (!id) return false;
+      const rule = categoryDeliveryMap.get(id);
+      return rule ? !rule.applyDeliveryCharge : false;
+    });
 
   const bagProductIds = new Set(items.map((i) => i.id));
   const recommendedFiltered = recommendedProducts
@@ -993,11 +1023,9 @@ export default function BagSlider() {
                           </div>
                         </div>
                         <p className="mt-2 text-[10px] text-zinc-400">
-                          Free delivery on bag subtotal ₹
-                          {FREE_DELIVERY_MIN_SUBTOTAL_INR.toLocaleString("en-IN")}{" "}
-                          or more (before GST). Below that, flat ₹
-                          {FLAT_DELIVERY_CHARGE_INR.toLocaleString("en-IN")}{" "}
-                          delivery.
+                          {deliveryExemptOnly
+                            ? "Items in your bag are from categories with no delivery charge."
+                            : `Free delivery on bag subtotal ₹${FREE_DELIVERY_MIN_SUBTOTAL_INR.toLocaleString("en-IN")} or more (before GST). Below that, category delivery rules apply (default ₹${FLAT_DELIVERY_CHARGE_INR}).`}
                         </p>
                       </div>
 
