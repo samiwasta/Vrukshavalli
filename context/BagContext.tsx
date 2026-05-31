@@ -21,6 +21,7 @@ interface BagContextValue {
   addItem: (item: BagItem) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
+  syncItemPrices: (updates: { id: string; price: number }[]) => void;
   clearBag: () => void;
 }
 
@@ -79,6 +80,23 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
           )
     );
 
+  const syncItemPrices = (updates: { id: string; price: number }[]) => {
+    if (!updates.length) return;
+    const byId = new Map(updates.map((u) => [u.id, u.price]));
+    setItems((prev) => {
+      let changed = false;
+      const next = prev.map((i) => {
+        const price = byId.get(i.id);
+        if (price !== undefined && price !== i.price) {
+          changed = true;
+          return { ...i, price };
+        }
+        return i;
+      });
+      return changed ? next : prev;
+    });
+  };
+
   const clearBag = () => {
     localStorage.removeItem("vrukshavalli_bag");
     setItems([]);
@@ -94,6 +112,7 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
         addItem,
         removeItem,
         updateQty,
+        syncItemPrices,
         clearBag,
       }}
     >

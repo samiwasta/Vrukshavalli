@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema/orders";
-import { coupons } from "@/lib/db/schema/coupons";
-import { validateOrderStock } from "@/lib/validate-order-stock";
+import {
+  resolveCheckoutLines,
+  formatLinesForOrderStorage,
+} from "@/lib/resolve-checkout-lines";
 import { computeCheckoutShipping } from "@/lib/checkout-shipping";
-import { sql, eq, count } from "drizzle-orm";
+import {
+  validateCouponByCode,
+  computeCouponDiscountAmount,
+  normalizeCouponCode,
+} from "@/lib/coupon-validate";
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID!;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY!;
@@ -53,7 +59,6 @@ export async function POST(req: Request) {
     items,
     shippingAddress,
     total: clientTotal,
-    discount: clientDiscount,
     couponCode: rawCouponCode,
   } = body;
 
@@ -78,67 +83,45 @@ export async function POST(req: Request) {
     );
   }
 
-  const stockCheck = await validateOrderStock(stockLines);
-  if (!stockCheck.ok) {
-    const first = stockCheck.issues[0];
-    const msg =
-      first.code === "out_of_stock"
-        ? `${first.name} is out of stock. Remove it or reduce quantity to continue.`
-        : first.code === "insufficient"
-          ? `${first.name}: only ${first.available} available (you have ${first.requested}).`
-          : `${first.name} is no longer available.`;
+  const resolved = await resolveCheckoutLines(stockLines);
+  if (!resolved.ok) {
     return NextResponse.json(
       {
         success: false,
-        error: msg,
-        issues: stockCheck.issues,
+        error: resolved.error,
+        issues: resolved.issues,
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
+  const subtotal = resolved.subtotal;
+  const orderItems = formatLinesForOrderStorage(resolved.lines);
+
   let validatedCouponCode: string | null = null;
-  let validatedDiscountAmount: number | null = null;
+  let discount = 0;
 
   if (rawCouponCode && typeof rawCouponCode === "string") {
-    const normalizedCode = rawCouponCode.trim().toUpperCase();
-    const coupon = await db.query.coupons.findFirst({
-      where: sql`upper(${coupons.code}) = ${normalizedCode}`,
+    const couponResult = await validateCouponByCode(rawCouponCode, {
+      userId: user.id,
     });
 
-    const isValid =
-      coupon &&
-      coupon.isActive &&
-      (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
-      (coupon.maxUses === null || coupon.usedCount < coupon.maxUses);
-
-    if (isValid && coupon.newUsersOnly) {
-      const [{ total: orderCount }] = await db
-        .select({ total: count() })
-        .from(orders)
-        .where(eq(orders.userId, user.id));
-      if (orderCount > 0) {
-        return NextResponse.json(
-          { success: false, error: "This coupon is for new customers only." },
-          { status: 400 }
-        );
-      }
+    if (!couponResult.valid) {
+      return NextResponse.json(
+        { success: false, error: couponResult.reason },
+        { status: 400 },
+      );
     }
 
-    if (isValid) {
-      validatedCouponCode = normalizedCode;
-      const discount = Number(clientDiscount) || 0;
-      validatedDiscountAmount = discount > 0 ? discount : null;
-    }
+    validatedCouponCode = normalizeCouponCode(couponResult.code);
+    discount = computeCouponDiscountAmount(
+      subtotal,
+      couponResult.discountType,
+      couponResult.discountValue,
+    );
   }
-
-  const subtotal = (items as { price?: number; quantity?: number }[]).reduce(
-    (sum, row) => sum + Number(row.price ?? 0) * Math.max(0, Number(row.quantity) || 0),
-    0,
-  );
-  const discount = validatedDiscountAmount ?? Math.max(0, Number(clientDiscount) || 0);
   const taxableAmount = Math.max(subtotal - discount, 0);
-  const productIds = stockLines.map((l: { productId: string }) => l.productId);
+  const productIds = resolved.lines.map((l) => l.productId);
   const shippingAmount = await computeCheckoutShipping(productIds, taxableAmount);
   const taxAmount = taxableAmount * 0.18;
   const serverTotal = parseFloat(
@@ -214,10 +197,10 @@ export async function POST(req: Request) {
     paymentMethod: "cashfree",
     totalAmount: serverTotal.toFixed(2),
     shippingAddress,
-    items,
+    items: orderItems,
     paymentSessionId,
     couponCode: validatedCouponCode,
-    discountAmount: validatedDiscountAmount !== null ? validatedDiscountAmount.toFixed(2) : null,
+    discountAmount: discount > 0 ? discount.toFixed(2) : null,
   });
 
   return NextResponse.json({

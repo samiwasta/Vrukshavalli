@@ -50,7 +50,7 @@ function formatINR(n: number): string {
 }
 
 export default function BagSlider() {
-  const { isBagOpen, closeBag, items, removeItem, updateQty, addItem } =
+  const { isBagOpen, closeBag, items, removeItem, updateQty, addItem, syncItemPrices } =
     useBag();
   const [stockCheck, setStockCheck] = useState<{
     loading: boolean;
@@ -128,8 +128,53 @@ export default function BagSlider() {
     };
   }, [isBagOpen]);
 
+  useEffect(() => {
+    if (!isBagOpen || !appliedCoupon?.code || items.length === 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/coupons/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: appliedCoupon.code }),
+        });
+        const json = await res.json();
+        if (cancelled) return;
+
+        if (!json.success || !json.data?.valid) {
+          setAppliedCoupon(null);
+          setCouponCode("");
+          setCouponError(
+            json.data?.reason || "This coupon is no longer valid.",
+          );
+          setCouponSuccess("");
+          return;
+        }
+
+        const { discountType, discountValue, description } = json.data;
+        setAppliedCoupon({
+          code: appliedCoupon.code,
+          discountType,
+          discountValue,
+          description,
+        });
+      } catch {
+        if (!cancelled) {
+          setAppliedCoupon(null);
+          setCouponCode("");
+          setCouponError("Could not verify coupon. Please apply it again.");
+          setCouponSuccess("");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isBagOpen, appliedCoupon?.code, items.length]);
+
   const fetchAvailableCoupons = async () => {
-    if (availableCoupons.length > 0) return; // already loaded
     try {
       setCouponsLoading(true);
       const res = await fetch("/api/coupons");
@@ -208,7 +253,15 @@ export default function BagSlider() {
     setView("bag");
   };
 
-  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const lineUnitPrice = (idx: number) => {
+    const row = stockCheck.rows[idx];
+    if (row?.price != null && row.price > 0) return roundMoney(row.price);
+    return roundMoney(items[idx]?.price ?? 0);
+  };
+
+  const subtotal = roundMoney(
+    items.reduce((sum, i, idx) => sum + lineUnitPrice(idx) * i.quantity, 0),
+  );
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
   const rawDiscount = appliedCoupon
     ? appliedCoupon.discountType === "flat"
@@ -376,6 +429,22 @@ export default function BagSlider() {
     };
   }, [items]);
 
+  useEffect(() => {
+    if (stockCheck.loading || stockCheck.rows.length === 0) return;
+    const updates = items.flatMap((item, idx) => {
+      const row = stockCheck.rows[idx];
+      if (
+        row?.productId === item.id &&
+        row.price > 0 &&
+        row.price !== item.price
+      ) {
+        return [{ id: item.id, price: row.price }];
+      }
+      return [];
+    });
+    if (updates.length) syncItemPrices(updates);
+  }, [stockCheck.rows, stockCheck.loading, items, syncItemPrices]);
+
   const checkout = async () => {
   if (!isSignedIn) {
     return;
@@ -385,6 +454,35 @@ export default function BagSlider() {
     return;
   }
 
+  if (appliedCoupon?.code) {
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: appliedCoupon.code }),
+      });
+      const json = await res.json();
+      if (!json.success || !json.data?.valid) {
+        setAppliedCoupon(null);
+        setCouponCode("");
+        setCouponError(json.data?.reason || "This coupon is no longer valid.");
+        setCouponSuccess("");
+        alert(json.data?.reason || "This coupon is no longer valid.");
+        return;
+      }
+      const { discountType, discountValue, description } = json.data;
+      setAppliedCoupon({
+        code: appliedCoupon.code,
+        discountType,
+        discountValue,
+        description,
+      });
+    } catch {
+      alert("Could not verify coupon. Please try again.");
+      return;
+    }
+  }
+
   try {
     const res = await fetch("/api/checkout", {
       method: "POST",
@@ -392,7 +490,7 @@ export default function BagSlider() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        items,
+        items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
         shippingAddress: address,
         subtotal,
         tax: taxAmount,
@@ -783,7 +881,7 @@ export default function BagSlider() {
 
                                   <p className="text-sm font-bold text-zinc-900">
                                     ₹
-                                    {formatINR(item.price * item.quantity)}
+                                    {formatINR(lineUnitPrice(idx) * item.quantity)}
                                   </p>
                                 </div>
                               </div>

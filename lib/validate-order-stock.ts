@@ -94,6 +94,9 @@ export type BagStockRow = {
   productId: string | null;
   categoryId: string | null;
   name: string;
+  slug: string;
+  image: string;
+  price: number;
   stock: number;
   stockCapacity: number | null;
   isActive: boolean;
@@ -121,6 +124,9 @@ export async function snapshotBagStockLines(
         productId: null,
         categoryId: null,
         name: "",
+        slug: "",
+        image: "",
+        price: 0,
         stock: 0,
         stockCapacity: null,
         isActive: false,
@@ -150,6 +156,9 @@ export async function snapshotBagStockLines(
       productId: product.id,
       categoryId: product.categoryId ?? null,
       name: product.name,
+      slug: product.slug,
+      image: product.image,
+      price: Number(product.price),
       stock,
       stockCapacity: product.stockCapacity ?? null,
       isActive: product.isActive,
